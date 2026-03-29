@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>California Prop 13 Tax Disparity Analysis</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f7f8fa;
+        color: #333;
+    }
+    h1 {
+        text-align: center;
+        color: #1a3a5c;
+        border-bottom: 3px solid #2980b9;
+        padding-bottom: 15px;
+        font-size: clamp(1.4rem, 4vw, 2rem);
+    }
+    .subtitle {
+        text-align: center;
+        color: #666;
+        margin: -10px 0 20px;
+        font-size: 0.95rem;
+    }
+    nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 16px;
+        margin: 20px 0 30px;
+        padding: 15px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    nav a {
+        color: #2980b9;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    nav a:hover { text-decoration: underline; }
+    .section-title {
+        color: #1a3a5c;
+        border-left: 4px solid #2980b9;
+        padding-left: 12px;
+        font-size: clamp(1.1rem, 3vw, 1.5rem);
+    }
+    section {
+        background: #fff;
+        padding: 25px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .notebook-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+    .output-text {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 10px 0;
+    }
+    .notebook-content table {
+        border-collapse: collapse;
+        font-size: 13px;
+        min-width: 400px;
+    }
+    .notebook-content table th,
+    .notebook-content table td {
+        border: 1px solid #ddd;
+        padding: 6px 10px;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .notebook-content table th {
+        background: #eaf2fb;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        color: #1a3a5c;
+    }
+    .output-image {
+        text-align: center;
+        margin: 15px 0;
+        overflow-x: auto;
+    }
+    .output-html { margin: 15px 0; overflow-x: auto; }
+    hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 30px 0;
+    }
+    .plotly-graph-div {
+        margin: 15px 0;
+        min-height: 400px;
+    }
+    footer {
+        text-align: center;
+        color: #999;
+        font-size: 13px;
+        margin-top: 40px;
+        padding: 20px;
+        border-top: 1px solid #eee;
+    }
+    @media (max-width: 768px) {
+        body { padding: 10px; }
+        section { padding: 12px; margin: 10px 0; border-radius: 6px; }
+        nav { padding: 10px; gap: 6px 12px; }
+        nav a { font-size: 13px; }
+        .plotly-graph-div { min-height: 300px; }
+        .notebook-content table { font-size: 11px; }
+        .notebook-content table th,
+        .notebook-content table td { padding: 4px 6px; }
+        .output-text { font-size: 11px; padding: 8px; }
+    }
+</style>
+</head>
+<body>
+<h1>California Prop 13 Property Tax Disparity Analysis</h1>
+<p class="subtitle">Which counties have the largest gaps between assessed value and market value?</p>
+<nav>
+    <a href="#section-0">Data Collection</a><a href="#section-1">Assessment Ratio Map</a><a href="#section-2">Top Bottom Counties</a><a href="#section-3">Revenue Gap Map</a><a href="#section-4">Income Correlation</a>
+</nav>
+
+<section id="section-0">
+<h2 class="section-title">Data Collection</h2>
+<div class="notebook-content"><h3>01 — Data Collection</h3>
+<p>Fetches and merges all data sources needed for the Prop 13 tax disparity analysis:</p>
+<li>**CA BOE 2022-23**: Total secured assessed values by county (embedded)</li>
+<li>**Zillow ZHVI**: County-level median home values (downloaded)</li>
+<li>**Census ACS 5-Year 2022**: Owner-occupied units and median household income (fetched)</li>
+<p>Output: `data/processed/county_prop13.csv`</p>
+<pre class="output-text">BOE data: 58 counties
+</pre>
+<div class="table-wrapper"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>county</th>
+      <th>fips</th>
+      <th>county_fips</th>
+      <th>boe_total_av_millions</th>
+      <th>residential_fraction</th>
+      <th>boe_residential_av_millions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Alameda</td>
+      <td>06001</td>
+      <td>001</td>
+      <td>352000</td>
+      <td>0.72</td>
+      <td>253440.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Alpine</td>
+      <td>06003</td>
+      <td>003</td>
+      <td>500</td>
+      <td>0.85</td>
+      <td>425.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Amador</td>
+      <td>06005</td>
+      <td>005</td>
+      <td>10000</td>
+      <td>0.85</td>
+      <td>8500.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Butte</td>
+      <td>06007</td>
+      <td>007</td>
+      <td>25000</td>
+      <td>0.78</td>
+      <td>19500.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Calaveras</td>
+      <td>06009</td>
+      <td>009</td>
+      <td>12000</td>
+      <td>0.85</td>
+      <td>10200.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="output-text">Downloading Zillow ZHVI county data ...
+</pre>
+<pre class="output-text">  Using Zillow data through 2026-02-28
+Zillow data: 58 CA counties
+</pre>
+<div class="table-wrapper"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>fips</th>
+      <th>zillow_median_value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>06037</td>
+      <td>8.788510e+05</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>06073</td>
+      <td>9.284592e+05</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>06059</td>
+      <td>1.169743e+06</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>06065</td>
+      <td>6.032127e+05</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>06071</td>
+      <td>5.471532e+05</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="output-text">Fetching Census ACS 5-Year 2022 data ...
+</pre>
+<pre class="output-text">Census data: 58 CA counties
+</pre>
+<div class="table-wrapper"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>fips</th>
+      <th>owner_occupied_units</th>
+      <th>median_income</th>
+      <th>census_median_value</th>
+      <th>census_aggregate_value</th>
+      <th>census_aggregate_taxes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>06001</td>
+      <td>317451</td>
+      <td>122488</td>
+      <td>999200</td>
+      <td>366023813600</td>
+      <td>2754706900</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>06003</td>
+      <td>360</td>
+      <td>101125</td>
+      <td>463900</td>
+      <td>235732900</td>
+      <td>1487300</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>06005</td>
+      <td>12440</td>
+      <td>74853</td>
+      <td>409600</td>
+      <td>6285757500</td>
+      <td>38356100</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>06007</td>
+      <td>48424</td>
+      <td>66085</td>
+      <td>371600</td>
+      <td>20545982200</td>
+      <td>146618200</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>06009</td>
+      <td>14114</td>
+      <td>77526</td>
+      <td>404200</td>
+      <td>6560376100</td>
+      <td>48768300</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="output-text">Merged: 58 counties, ['county', 'fips', 'county_fips', 'boe_total_av_millions', 'residential_fraction', 'boe_residential_av_millions', 'zillow_median_value', 'owner_occupied_units', 'median_income', 'census_median_value', 'census_aggregate_value', 'census_aggregate_taxes']
+</pre>
+<pre class="output-text">Saved to /Users/mckornfield/repo/california-stats/data/processed/county_prop13.csv
+Statewide annual tax gap estimate: $25,629M
+</pre>
+<div class="table-wrapper"><style type="text/css">
+</style>
+<table id="T_6e5de">
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_6e5de_level0_col0" class="col_heading level0 col0" >county</th>
+      <th id="T_6e5de_level0_col1" class="col_heading level0 col1" >residential_av_millions</th>
+      <th id="T_6e5de_level0_col2" class="col_heading level0 col2" >market_value_millions</th>
+      <th id="T_6e5de_level0_col3" class="col_heading level0 col3" >assessment_ratio</th>
+      <th id="T_6e5de_level0_col4" class="col_heading level0 col4" >tax_gap_annual_millions</th>
+      <th id="T_6e5de_level0_col5" class="col_heading level0 col5" >tax_gap_per_household</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_6e5de_level0_row0" class="row_heading level0 row0" >52</th>
+      <td id="T_6e5de_row0_col0" class="data row0 col0" >Trinity</td>
+      <td id="T_6e5de_row0_col1" class="data row0 col1" >$684M</td>
+      <td id="T_6e5de_row0_col2" class="data row0 col2" >$2,328M</td>
+      <td id="T_6e5de_row0_col3" class="data row0 col3" >29.39%</td>
+      <td id="T_6e5de_row0_col4" class="data row0 col4" >$18M</td>
+      <td id="T_6e5de_row0_col5" class="data row0 col5" >$4,656</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row1" class="row_heading level0 row1" >40</th>
+      <td id="T_6e5de_row1_col0" class="data row1 col0" >San Mateo</td>
+      <td id="T_6e5de_row1_col1" class="data row1 col1" >$154,305M</td>
+      <td id="T_6e5de_row1_col2" class="data row1 col2" >$292,050M</td>
+      <td id="T_6e5de_row1_col3" class="data row1 col3" >52.84%</td>
+      <td id="T_6e5de_row1_col4" class="data row1 col4" >$1,515M</td>
+      <td id="T_6e5de_row1_col5" class="data row1 col5" >$9,628</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row2" class="row_heading level0 row2" >41</th>
+      <td id="T_6e5de_row2_col0" class="data row2 col0" >Santa Barbara</td>
+      <td id="T_6e5de_row2_col1" class="data row2 col1" >$45,580M</td>
+      <td id="T_6e5de_row2_col2" class="data row2 col2" >$85,327M</td>
+      <td id="T_6e5de_row2_col3" class="data row2 col3" >53.42%</td>
+      <td id="T_6e5de_row2_col4" class="data row2 col4" >$437M</td>
+      <td id="T_6e5de_row2_col5" class="data row2 col5" >$5,593</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row3" class="row_heading level0 row3" >54</th>
+      <td id="T_6e5de_row3_col0" class="data row3 col0" >Tuolumne</td>
+      <td id="T_6e5de_row3_col1" class="data row3 col1" >$4,579M</td>
+      <td id="T_6e5de_row3_col2" class="data row3 col2" >$8,361M</td>
+      <td id="T_6e5de_row3_col3" class="data row3 col3" >54.77%</td>
+      <td id="T_6e5de_row3_col4" class="data row3 col4" >$42M</td>
+      <td id="T_6e5de_row3_col5" class="data row3 col5" >$2,448</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row4" class="row_heading level0 row4" >2</th>
+      <td id="T_6e5de_row4_col0" class="data row4 col0" >Amador</td>
+      <td id="T_6e5de_row4_col1" class="data row4 col1" >$3,487M</td>
+      <td id="T_6e5de_row4_col2" class="data row4 col2" >$6,286M</td>
+      <td id="T_6e5de_row4_col3" class="data row4 col3" >55.47%</td>
+      <td id="T_6e5de_row4_col4" class="data row4 col4" >$31M</td>
+      <td id="T_6e5de_row4_col5" class="data row4 col5" >$2,475</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row5" class="row_heading level0 row5" >22</th>
+      <td id="T_6e5de_row5_col0" class="data row5 col0" >Mendocino</td>
+      <td id="T_6e5de_row5_col1" class="data row5 col1" >$6,812M</td>
+      <td id="T_6e5de_row5_col2" class="data row5 col2" >$12,184M</td>
+      <td id="T_6e5de_row5_col3" class="data row5 col3" >55.91%</td>
+      <td id="T_6e5de_row5_col4" class="data row5 col4" >$59M</td>
+      <td id="T_6e5de_row5_col5" class="data row5 col5" >$2,808</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row6" class="row_heading level0 row6" >27</th>
+      <td id="T_6e5de_row6_col0" class="data row6 col0" >Napa</td>
+      <td id="T_6e5de_row6_col1" class="data row6 col1" >$18,578M</td>
+      <td id="T_6e5de_row6_col2" class="data row6 col2" >$33,117M</td>
+      <td id="T_6e5de_row6_col3" class="data row6 col3" >56.10%</td>
+      <td id="T_6e5de_row6_col4" class="data row6 col4" >$160M</td>
+      <td id="T_6e5de_row6_col5" class="data row6 col5" >$4,986</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row7" class="row_heading level0 row7" >5</th>
+      <td id="T_6e5de_row7_col0" class="data row7 col0" >Colusa</td>
+      <td id="T_6e5de_row7_col1" class="data row7 col1" >$1,129M</td>
+      <td id="T_6e5de_row7_col2" class="data row7 col2" >$2,009M</td>
+      <td id="T_6e5de_row7_col3" class="data row7 col3" >56.21%</td>
+      <td id="T_6e5de_row7_col4" class="data row7 col4" >$10M</td>
+      <td id="T_6e5de_row7_col5" class="data row7 col5" >$2,065</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row8" class="row_heading level0 row8" >21</th>
+      <td id="T_6e5de_row8_col0" class="data row8 col0" >Mariposa</td>
+      <td id="T_6e5de_row8_col1" class="data row8 col1" >$1,317M</td>
+      <td id="T_6e5de_row8_col2" class="data row8 col2" >$2,340M</td>
+      <td id="T_6e5de_row8_col3" class="data row8 col3" >56.28%</td>
+      <td id="T_6e5de_row8_col4" class="data row8 col4" >$11M</td>
+      <td id="T_6e5de_row8_col5" class="data row8 col5" >$2,008</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row9" class="row_heading level0 row9" >43</th>
+      <td id="T_6e5de_row9_col0" class="data row9 col0" >Santa Cruz</td>
+      <td id="T_6e5de_row9_col1" class="data row9 col1" >$35,720M</td>
+      <td id="T_6e5de_row9_col2" class="data row9 col2" >$62,778M</td>
+      <td id="T_6e5de_row9_col3" class="data row9 col3" >56.90%</td>
+      <td id="T_6e5de_row9_col4" class="data row9 col4" >$298M</td>
+      <td id="T_6e5de_row9_col5" class="data row9 col5" >$5,145</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row10" class="row_heading level0 row10" >26</th>
+      <td id="T_6e5de_row10_col0" class="data row10 col0" >Monterey</td>
+      <td id="T_6e5de_row10_col1" class="data row10 col1" >$34,771M</td>
+      <td id="T_6e5de_row10_col2" class="data row10 col2" >$60,860M</td>
+      <td id="T_6e5de_row10_col3" class="data row10 col3" >57.13%</td>
+      <td id="T_6e5de_row10_col4" class="data row10 col4" >$287M</td>
+      <td id="T_6e5de_row10_col5" class="data row10 col5" >$4,198</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row11" class="row_heading level0 row11" >11</th>
+      <td id="T_6e5de_row11_col0" class="data row11 col0" >Humboldt</td>
+      <td id="T_6e5de_row11_col1" class="data row11 col1" >$7,955M</td>
+      <td id="T_6e5de_row11_col2" class="data row11 col2" >$13,896M</td>
+      <td id="T_6e5de_row11_col3" class="data row11 col3" >57.25%</td>
+      <td id="T_6e5de_row11_col4" class="data row11 col4" >$65M</td>
+      <td id="T_6e5de_row11_col5" class="data row11 col5" >$2,110</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row12" class="row_heading level0 row12" >1</th>
+      <td id="T_6e5de_row12_col0" class="data row12 col0" >Alpine</td>
+      <td id="T_6e5de_row12_col1" class="data row12 col1" >$135M</td>
+      <td id="T_6e5de_row12_col2" class="data row12 col2" >$236M</td>
+      <td id="T_6e5de_row12_col3" class="data row12 col3" >57.36%</td>
+      <td id="T_6e5de_row12_col4" class="data row12 col4" >$1M</td>
+      <td id="T_6e5de_row12_col5" class="data row12 col5" >$3,072</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row13" class="row_heading level0 row13" >13</th>
+      <td id="T_6e5de_row13_col0" class="data row13 col0" >Inyo</td>
+      <td id="T_6e5de_row13_col1" class="data row13 col1" >$992M</td>
+      <td id="T_6e5de_row13_col2" class="data row13 col2" >$1,713M</td>
+      <td id="T_6e5de_row13_col3" class="data row13 col3" >57.88%</td>
+      <td id="T_6e5de_row13_col4" class="data row13 col4" >$8M</td>
+      <td id="T_6e5de_row13_col5" class="data row13 col5" >$1,533</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row14" class="row_heading level0 row14" >24</th>
+      <td id="T_6e5de_row14_col0" class="data row14 col0" >Modoc</td>
+      <td id="T_6e5de_row14_col1" class="data row14 col1" >$429M</td>
+      <td id="T_6e5de_row14_col2" class="data row14 col2" >$739M</td>
+      <td id="T_6e5de_row14_col3" class="data row14 col3" >58.09%</td>
+      <td id="T_6e5de_row14_col4" class="data row14 col4" >$3M</td>
+      <td id="T_6e5de_row14_col5" class="data row14 col5" >$1,332</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row15" class="row_heading level0 row15" >37</th>
+      <td id="T_6e5de_row15_col0" class="data row15 col0" >San Francisco</td>
+      <td id="T_6e5de_row15_col1" class="data row15 col1" >$135,399M</td>
+      <td id="T_6e5de_row15_col2" class="data row15 col2" >$231,291M</td>
+      <td id="T_6e5de_row15_col3" class="data row15 col3" >58.54%</td>
+      <td id="T_6e5de_row15_col4" class="data row15 col4" >$1,055M</td>
+      <td id="T_6e5de_row15_col5" class="data row15 col5" >$7,582</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row16" class="row_heading level0 row16" >46</th>
+      <td id="T_6e5de_row16_col0" class="data row16 col0" >Siskiyou</td>
+      <td id="T_6e5de_row16_col1" class="data row16 col1" >$2,362M</td>
+      <td id="T_6e5de_row16_col2" class="data row16 col2" >$4,035M</td>
+      <td id="T_6e5de_row16_col3" class="data row16 col3" >58.54%</td>
+      <td id="T_6e5de_row16_col4" class="data row16 col4" >$18M</td>
+      <td id="T_6e5de_row16_col5" class="data row16 col5" >$1,444</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row17" class="row_heading level0 row17" >7</th>
+      <td id="T_6e5de_row17_col0" class="data row17 col0" >Del Norte</td>
+      <td id="T_6e5de_row17_col1" class="data row17 col1" >$1,330M</td>
+      <td id="T_6e5de_row17_col2" class="data row17 col2" >$2,254M</td>
+      <td id="T_6e5de_row17_col3" class="data row17 col3" >59.02%</td>
+      <td id="T_6e5de_row17_col4" class="data row17 col4" >$10M</td>
+      <td id="T_6e5de_row17_col5" class="data row17 col5" >$1,565</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row18" class="row_heading level0 row18" >42</th>
+      <td id="T_6e5de_row18_col0" class="data row18 col0" >Santa Clara</td>
+      <td id="T_6e5de_row18_col1" class="data row18 col1" >$352,096M</td>
+      <td id="T_6e5de_row18_col2" class="data row18 col2" >$595,654M</td>
+      <td id="T_6e5de_row18_col3" class="data row18 col3" >59.11%</td>
+      <td id="T_6e5de_row18_col4" class="data row18 col4" >$2,679M</td>
+      <td id="T_6e5de_row18_col5" class="data row18 col5" >$7,410</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row19" class="row_heading level0 row19" >48</th>
+      <td id="T_6e5de_row19_col0" class="data row19 col0" >Sonoma</td>
+      <td id="T_6e5de_row19_col1" class="data row19 col1" >$63,130M</td>
+      <td id="T_6e5de_row19_col2" class="data row19 col2" >$105,791M</td>
+      <td id="T_6e5de_row19_col3" class="data row19 col3" >59.67%</td>
+      <td id="T_6e5de_row19_col4" class="data row19 col4" >$469M</td>
+      <td id="T_6e5de_row19_col5" class="data row19 col5" >$4,014</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row20" class="row_heading level0 row20" >10</th>
+      <td id="T_6e5de_row20_col0" class="data row20 col0" >Glenn</td>
+      <td id="T_6e5de_row20_col1" class="data row20 col1" >$1,366M</td>
+      <td id="T_6e5de_row20_col2" class="data row20 col2" >$2,289M</td>
+      <td id="T_6e5de_row20_col3" class="data row20 col3" >59.70%</td>
+      <td id="T_6e5de_row20_col4" class="data row20 col4" >$10M</td>
+      <td id="T_6e5de_row20_col5" class="data row20 col5" >$1,718</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row21" class="row_heading level0 row21" >39</th>
+      <td id="T_6e5de_row21_col0" class="data row21 col0" >San Luis Obispo</td>
+      <td id="T_6e5de_row21_col1" class="data row21 col1" >$33,445M</td>
+      <td id="T_6e5de_row21_col2" class="data row21 col2" >$55,922M</td>
+      <td id="T_6e5de_row21_col3" class="data row21 col3" >59.81%</td>
+      <td id="T_6e5de_row21_col4" class="data row21 col4" >$247M</td>
+      <td id="T_6e5de_row21_col5" class="data row21 col5" >$3,689</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row22" class="row_heading level0 row22" >51</th>
+      <td id="T_6e5de_row22_col0" class="data row22 col0" >Tehama</td>
+      <td id="T_6e5de_row22_col1" class="data row22 col1" >$3,309M</td>
+      <td id="T_6e5de_row22_col2" class="data row22 col2" >$5,532M</td>
+      <td id="T_6e5de_row22_col3" class="data row22 col3" >59.82%</td>
+      <td id="T_6e5de_row22_col4" class="data row22 col4" >$24M</td>
+      <td id="T_6e5de_row22_col5" class="data row22 col5" >$1,480</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row23" class="row_heading level0 row23" >16</th>
+      <td id="T_6e5de_row23_col0" class="data row23 col0" >Lake</td>
+      <td id="T_6e5de_row23_col1" class="data row23 col1" >$4,062M</td>
+      <td id="T_6e5de_row23_col2" class="data row23 col2" >$6,719M</td>
+      <td id="T_6e5de_row23_col3" class="data row23 col3" >60.45%</td>
+      <td id="T_6e5de_row23_col4" class="data row23 col4" >$29M</td>
+      <td id="T_6e5de_row23_col5" class="data row23 col5" >$1,587</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row24" class="row_heading level0 row24" >23</th>
+      <td id="T_6e5de_row24_col0" class="data row24 col0" >Merced</td>
+      <td id="T_6e5de_row24_col1" class="data row24 col1" >$10,663M</td>
+      <td id="T_6e5de_row24_col2" class="data row24 col2" >$17,614M</td>
+      <td id="T_6e5de_row24_col3" class="data row24 col3" >60.53%</td>
+      <td id="T_6e5de_row24_col4" class="data row24 col4" >$76M</td>
+      <td id="T_6e5de_row24_col5" class="data row24 col5" >$1,732</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row25" class="row_heading level0 row25" >29</th>
+      <td id="T_6e5de_row25_col0" class="data row25 col0" >Orange</td>
+      <td id="T_6e5de_row25_col1" class="data row25 col1" >$384,917M</td>
+      <td id="T_6e5de_row25_col2" class="data row25 col2" >$632,198M</td>
+      <td id="T_6e5de_row25_col3" class="data row25 col3" >60.89%</td>
+      <td id="T_6e5de_row25_col4" class="data row25 col4" >$2,720M</td>
+      <td id="T_6e5de_row25_col5" class="data row25 col5" >$4,511</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row26" class="row_heading level0 row26" >18</th>
+      <td id="T_6e5de_row26_col0" class="data row26 col0" >Los Angeles</td>
+      <td id="T_6e5de_row26_col1" class="data row26 col1" >$922,562M</td>
+      <td id="T_6e5de_row26_col2" class="data row26 col2" >$1,513,787M</td>
+      <td id="T_6e5de_row26_col3" class="data row26 col3" >60.94%</td>
+      <td id="T_6e5de_row26_col4" class="data row26 col4" >$6,503M</td>
+      <td id="T_6e5de_row26_col5" class="data row26 col5" >$4,190</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row27" class="row_heading level0 row27" >31</th>
+      <td id="T_6e5de_row27_col0" class="data row27 col0" >Plumas</td>
+      <td id="T_6e5de_row27_col1" class="data row27 col1" >$1,372M</td>
+      <td id="T_6e5de_row27_col2" class="data row27 col2" >$2,250M</td>
+      <td id="T_6e5de_row27_col3" class="data row27 col3" >60.96%</td>
+      <td id="T_6e5de_row27_col4" class="data row27 col4" >$10M</td>
+      <td id="T_6e5de_row27_col5" class="data row27 col5" >$1,604</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row28" class="row_heading level0 row28" >45</th>
+      <td id="T_6e5de_row28_col0" class="data row28 col0" >Sierra</td>
+      <td id="T_6e5de_row28_col1" class="data row28 col1" >$244M</td>
+      <td id="T_6e5de_row28_col2" class="data row28 col2" >$389M</td>
+      <td id="T_6e5de_row28_col3" class="data row28 col3" >62.76%</td>
+      <td id="T_6e5de_row28_col4" class="data row28 col4" >$2M</td>
+      <td id="T_6e5de_row28_col5" class="data row28 col5" >$1,697</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row29" class="row_heading level0 row29" >19</th>
+      <td id="T_6e5de_row29_col0" class="data row29 col0" >Madera</td>
+      <td id="T_6e5de_row29_col1" class="data row29 col1" >$7,739M</td>
+      <td id="T_6e5de_row29_col2" class="data row29 col2" >$12,157M</td>
+      <td id="T_6e5de_row29_col3" class="data row29 col3" >63.66%</td>
+      <td id="T_6e5de_row29_col4" class="data row29 col4" >$49M</td>
+      <td id="T_6e5de_row29_col5" class="data row29 col5" >$1,692</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row30" class="row_heading level0 row30" >36</th>
+      <td id="T_6e5de_row30_col0" class="data row30 col0" >San Diego</td>
+      <td id="T_6e5de_row30_col1" class="data row30 col1" >$349,894M</td>
+      <td id="T_6e5de_row30_col2" class="data row30 col2" >$549,144M</td>
+      <td id="T_6e5de_row30_col3" class="data row30 col3" >63.72%</td>
+      <td id="T_6e5de_row30_col4" class="data row30 col4" >$2,192M</td>
+      <td id="T_6e5de_row30_col5" class="data row30 col5" >$3,516</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row31" class="row_heading level0 row31" >55</th>
+      <td id="T_6e5de_row31_col0" class="data row31 col0" >Ventura</td>
+      <td id="T_6e5de_row31_col1" class="data row31 col1" >$92,758M</td>
+      <td id="T_6e5de_row31_col2" class="data row31 col2" >$144,777M</td>
+      <td id="T_6e5de_row31_col3" class="data row31 col3" >64.07%</td>
+      <td id="T_6e5de_row31_col4" class="data row31 col4" >$572M</td>
+      <td id="T_6e5de_row31_col5" class="data row31 col5" >$3,241</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row32" class="row_heading level0 row32" >44</th>
+      <td id="T_6e5de_row32_col0" class="data row32 col0" >Shasta</td>
+      <td id="T_6e5de_row32_col1" class="data row32 col1" >$11,169M</td>
+      <td id="T_6e5de_row32_col2" class="data row32 col2" >$17,294M</td>
+      <td id="T_6e5de_row32_col3" class="data row32 col3" >64.58%</td>
+      <td id="T_6e5de_row32_col4" class="data row32 col4" >$67M</td>
+      <td id="T_6e5de_row32_col5" class="data row32 col5" >$1,456</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row33" class="row_heading level0 row33" >3</th>
+      <td id="T_6e5de_row33_col0" class="data row33 col0" >Butte</td>
+      <td id="T_6e5de_row33_col1" class="data row33 col1" >$13,329M</td>
+      <td id="T_6e5de_row33_col2" class="data row33 col2" >$20,546M</td>
+      <td id="T_6e5de_row33_col3" class="data row33 col3" >64.87%</td>
+      <td id="T_6e5de_row33_col4" class="data row33 col4" >$79M</td>
+      <td id="T_6e5de_row33_col5" class="data row33 col5" >$1,639</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row34" class="row_heading level0 row34" >28</th>
+      <td id="T_6e5de_row34_col0" class="data row34 col0" >Nevada</td>
+      <td id="T_6e5de_row34_col1" class="data row34 col1" >$12,866M</td>
+      <td id="T_6e5de_row34_col2" class="data row34 col2" >$19,402M</td>
+      <td id="T_6e5de_row34_col3" class="data row34 col3" >66.31%</td>
+      <td id="T_6e5de_row34_col4" class="data row34 col4" >$72M</td>
+      <td id="T_6e5de_row34_col5" class="data row34 col5" >$2,319</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row35" class="row_heading level0 row35" >53</th>
+      <td id="T_6e5de_row35_col0" class="data row35 col0" >Tulare</td>
+      <td id="T_6e5de_row35_col1" class="data row35 col1" >$18,018M</td>
+      <td id="T_6e5de_row35_col2" class="data row35 col2" >$27,150M</td>
+      <td id="T_6e5de_row35_col3" class="data row35 col3" >66.37%</td>
+      <td id="T_6e5de_row35_col4" class="data row35 col4" >$100M</td>
+      <td id="T_6e5de_row35_col5" class="data row35 col5" >$1,224</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row36" class="row_heading level0 row36" >8</th>
+      <td id="T_6e5de_row36_col0" class="data row36 col0" >El Dorado</td>
+      <td id="T_6e5de_row36_col1" class="data row36 col1" >$25,796M</td>
+      <td id="T_6e5de_row36_col2" class="data row36 col2" >$38,420M</td>
+      <td id="T_6e5de_row36_col3" class="data row36 col3" >67.14%</td>
+      <td id="T_6e5de_row36_col4" class="data row36 col4" >$139M</td>
+      <td id="T_6e5de_row36_col5" class="data row36 col5" >$2,426</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row37" class="row_heading level0 row37" >49</th>
+      <td id="T_6e5de_row37_col0" class="data row37 col0" >Stanislaus</td>
+      <td id="T_6e5de_row37_col1" class="data row37 col1" >$31,919M</td>
+      <td id="T_6e5de_row37_col2" class="data row37 col2" >$47,415M</td>
+      <td id="T_6e5de_row37_col3" class="data row37 col3" >67.32%</td>
+      <td id="T_6e5de_row37_col4" class="data row37 col4" >$170M</td>
+      <td id="T_6e5de_row37_col5" class="data row37 col5" >$1,603</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row38" class="row_heading level0 row38" >4</th>
+      <td id="T_6e5de_row38_col0" class="data row38 col0" >Calaveras</td>
+      <td id="T_6e5de_row38_col1" class="data row38 col1" >$4,433M</td>
+      <td id="T_6e5de_row38_col2" class="data row38 col2" >$6,560M</td>
+      <td id="T_6e5de_row38_col3" class="data row38 col3" >67.58%</td>
+      <td id="T_6e5de_row38_col4" class="data row38 col4" >$23M</td>
+      <td id="T_6e5de_row38_col5" class="data row38 col5" >$1,658</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row39" class="row_heading level0 row39" >20</th>
+      <td id="T_6e5de_row39_col0" class="data row39 col0" >Marin</td>
+      <td id="T_6e5de_row39_col1" class="data row39 col1" >$75,276M</td>
+      <td id="T_6e5de_row39_col2" class="data row39 col2" >$110,995M</td>
+      <td id="T_6e5de_row39_col3" class="data row39 col3" >67.82%</td>
+      <td id="T_6e5de_row39_col4" class="data row39 col4" >$393M</td>
+      <td id="T_6e5de_row39_col5" class="data row39 col5" >$5,913</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row40" class="row_heading level0 row40" >25</th>
+      <td id="T_6e5de_row40_col0" class="data row40 col0" >Mono</td>
+      <td id="T_6e5de_row40_col1" class="data row40 col1" >$1,471M</td>
+      <td id="T_6e5de_row40_col2" class="data row40 col2" >$2,157M</td>
+      <td id="T_6e5de_row40_col3" class="data row40 col3" >68.17%</td>
+      <td id="T_6e5de_row40_col4" class="data row40 col4" >$8M</td>
+      <td id="T_6e5de_row40_col5" class="data row40 col5" >$2,018</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row41" class="row_heading level0 row41" >17</th>
+      <td id="T_6e5de_row41_col0" class="data row41 col0" >Lassen</td>
+      <td id="T_6e5de_row41_col1" class="data row41 col1" >$1,092M</td>
+      <td id="T_6e5de_row41_col2" class="data row41 col2" >$1,596M</td>
+      <td id="T_6e5de_row41_col3" class="data row41 col3" >68.41%</td>
+      <td id="T_6e5de_row41_col4" class="data row41 col4" >$6M</td>
+      <td id="T_6e5de_row41_col5" class="data row41 col5" >$904</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row42" class="row_heading level0 row42" >0</th>
+      <td id="T_6e5de_row42_col0" class="data row42 col0" >Alameda</td>
+      <td id="T_6e5de_row42_col1" class="data row42 col1" >$250,428M</td>
+      <td id="T_6e5de_row42_col2" class="data row42 col2" >$366,024M</td>
+      <td id="T_6e5de_row42_col3" class="data row42 col3" >68.42%</td>
+      <td id="T_6e5de_row42_col4" class="data row42 col4" >$1,272M</td>
+      <td id="T_6e5de_row42_col5" class="data row42 col5" >$4,006</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row43" class="row_heading level0 row43" >15</th>
+      <td id="T_6e5de_row43_col0" class="data row43 col0" >Kings</td>
+      <td id="T_6e5de_row43_col1" class="data row43 col1" >$5,294M</td>
+      <td id="T_6e5de_row43_col2" class="data row43 col2" >$7,559M</td>
+      <td id="T_6e5de_row43_col3" class="data row43 col3" >70.04%</td>
+      <td id="T_6e5de_row43_col4" class="data row43 col4" >$25M</td>
+      <td id="T_6e5de_row43_col5" class="data row43 col5" >$1,041</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row44" class="row_heading level0 row44" >50</th>
+      <td id="T_6e5de_row44_col0" class="data row44 col0" >Sutter</td>
+      <td id="T_6e5de_row44_col1" class="data row44 col1" >$5,832M</td>
+      <td id="T_6e5de_row44_col2" class="data row44 col2" >$8,320M</td>
+      <td id="T_6e5de_row44_col3" class="data row44 col3" >70.10%</td>
+      <td id="T_6e5de_row44_col4" class="data row44 col4" >$27M</td>
+      <td id="T_6e5de_row44_col5" class="data row44 col5" >$1,391</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row45" class="row_heading level0 row45" >35</th>
+      <td id="T_6e5de_row45_col0" class="data row45 col0" >San Bernardino</td>
+      <td id="T_6e5de_row45_col1" class="data row45 col1" >$136,253M</td>
+      <td id="T_6e5de_row45_col2" class="data row45 col2" >$194,347M</td>
+      <td id="T_6e5de_row45_col3" class="data row45 col3" >70.11%</td>
+      <td id="T_6e5de_row45_col4" class="data row45 col4" >$639M</td>
+      <td id="T_6e5de_row45_col5" class="data row45 col5" >$1,585</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row46" class="row_heading level0 row46" >33</th>
+      <td id="T_6e5de_row46_col0" class="data row46 col0" >Sacramento</td>
+      <td id="T_6e5de_row46_col1" class="data row46 col1" >$120,760M</td>
+      <td id="T_6e5de_row46_col2" class="data row46 col2" >$169,914M</td>
+      <td id="T_6e5de_row46_col3" class="data row46 col3" >71.07%</td>
+      <td id="T_6e5de_row46_col4" class="data row46 col4" >$541M</td>
+      <td id="T_6e5de_row46_col5" class="data row46 col5" >$1,645</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row47" class="row_heading level0 row47" >9</th>
+      <td id="T_6e5de_row47_col0" class="data row47 col0" >Fresno</td>
+      <td id="T_6e5de_row47_col1" class="data row47 col1" >$48,618M</td>
+      <td id="T_6e5de_row47_col2" class="data row47 col2" >$68,073M</td>
+      <td id="T_6e5de_row47_col3" class="data row47 col3" >71.42%</td>
+      <td id="T_6e5de_row47_col4" class="data row47 col4" >$214M</td>
+      <td id="T_6e5de_row47_col5" class="data row47 col5" >$1,241</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row48" class="row_heading level0 row48" >6</th>
+      <td id="T_6e5de_row48_col0" class="data row48 col0" >Contra Costa</td>
+      <td id="T_6e5de_row48_col1" class="data row48 col1" >$194,542M</td>
+      <td id="T_6e5de_row48_col2" class="data row48 col2" >$272,062M</td>
+      <td id="T_6e5de_row48_col3" class="data row48 col3" >71.51%</td>
+      <td id="T_6e5de_row48_col4" class="data row48 col4" >$853M</td>
+      <td id="T_6e5de_row48_col5" class="data row48 col5" >$3,108</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row49" class="row_heading level0 row49" >38</th>
+      <td id="T_6e5de_row49_col0" class="data row49 col0" >San Joaquin</td>
+      <td id="T_6e5de_row49_col1" class="data row49 col1" >$52,697M</td>
+      <td id="T_6e5de_row49_col2" class="data row49 col2" >$73,642M</td>
+      <td id="T_6e5de_row49_col3" class="data row49 col3" >71.56%</td>
+      <td id="T_6e5de_row49_col4" class="data row49 col4" >$230M</td>
+      <td id="T_6e5de_row49_col5" class="data row49 col5" >$1,618</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row50" class="row_heading level0 row50" >56</th>
+      <td id="T_6e5de_row50_col0" class="data row50 col0" >Yolo</td>
+      <td id="T_6e5de_row50_col1" class="data row50 col1" >$18,373M</td>
+      <td id="T_6e5de_row50_col2" class="data row50 col2" >$25,464M</td>
+      <td id="T_6e5de_row50_col3" class="data row50 col3" >72.15%</td>
+      <td id="T_6e5de_row50_col4" class="data row50 col4" >$78M</td>
+      <td id="T_6e5de_row50_col5" class="data row50 col5" >$1,964</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row51" class="row_heading level0 row51" >47</th>
+      <td id="T_6e5de_row51_col0" class="data row51 col0" >Solano</td>
+      <td id="T_6e5de_row51_col1" class="data row51 col1" >$40,847M</td>
+      <td id="T_6e5de_row51_col2" class="data row51 col2" >$56,539M</td>
+      <td id="T_6e5de_row51_col3" class="data row51 col3" >72.25%</td>
+      <td id="T_6e5de_row51_col4" class="data row51 col4" >$173M</td>
+      <td id="T_6e5de_row51_col5" class="data row51 col5" >$1,767</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row52" class="row_heading level0 row52" >57</th>
+      <td id="T_6e5de_row52_col0" class="data row52 col0" >Yuba</td>
+      <td id="T_6e5de_row52_col1" class="data row52 col1" >$4,682M</td>
+      <td id="T_6e5de_row52_col2" class="data row52 col2" >$6,470M</td>
+      <td id="T_6e5de_row52_col3" class="data row52 col3" >72.37%</td>
+      <td id="T_6e5de_row52_col4" class="data row52 col4" >$20M</td>
+      <td id="T_6e5de_row52_col5" class="data row52 col5" >$1,162</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row53" class="row_heading level0 row53" >34</th>
+      <td id="T_6e5de_row53_col0" class="data row53 col0" >San Benito</td>
+      <td id="T_6e5de_row53_col1" class="data row53 col1" >$7,331M</td>
+      <td id="T_6e5de_row53_col2" class="data row53 col2" >$10,129M</td>
+      <td id="T_6e5de_row53_col3" class="data row53 col3" >72.37%</td>
+      <td id="T_6e5de_row53_col4" class="data row53 col4" >$31M</td>
+      <td id="T_6e5de_row53_col5" class="data row53 col5" >$2,352</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row54" class="row_heading level0 row54" >30</th>
+      <td id="T_6e5de_row54_col0" class="data row54 col0" >Placer</td>
+      <td id="T_6e5de_row54_col1" class="data row54 col1" >$58,948M</td>
+      <td id="T_6e5de_row54_col2" class="data row54 col2" >$78,141M</td>
+      <td id="T_6e5de_row54_col3" class="data row54 col3" >75.44%</td>
+      <td id="T_6e5de_row54_col4" class="data row54 col4" >$211M</td>
+      <td id="T_6e5de_row54_col5" class="data row54 col5" >$1,875</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row55" class="row_heading level0 row55" >12</th>
+      <td id="T_6e5de_row55_col0" class="data row55 col0" >Imperial</td>
+      <td id="T_6e5de_row55_col1" class="data row55 col1" >$6,070M</td>
+      <td id="T_6e5de_row55_col2" class="data row55 col2" >$7,819M</td>
+      <td id="T_6e5de_row55_col3" class="data row55 col3" >77.63%</td>
+      <td id="T_6e5de_row55_col4" class="data row55 col4" >$19M</td>
+      <td id="T_6e5de_row55_col5" class="data row55 col5" >$709</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row56" class="row_heading level0 row56" >32</th>
+      <td id="T_6e5de_row56_col0" class="data row56 col0" >Riverside</td>
+      <td id="T_6e5de_row56_col1" class="data row56 col1" >$213,516M</td>
+      <td id="T_6e5de_row56_col2" class="data row56 col2" >$263,322M</td>
+      <td id="T_6e5de_row56_col3" class="data row56 col3" >81.09%</td>
+      <td id="T_6e5de_row56_col4" class="data row56 col4" >$548M</td>
+      <td id="T_6e5de_row56_col5" class="data row56 col5" >$1,066</td>
+    </tr>
+    <tr>
+      <th id="T_6e5de_level0_row57" class="row_heading level0 row57" >14</th>
+      <td id="T_6e5de_row57_col0" class="data row57 col0" >Kern</td>
+      <td id="T_6e5de_row57_col1" class="data row57 col1" >$46,659M</td>
+      <td id="T_6e5de_row57_col2" class="data row57 col2" >$53,900M</td>
+      <td id="T_6e5de_row57_col3" class="data row57 col3" >86.57%</td>
+      <td id="T_6e5de_row57_col4" class="data row57 col4" >$80M</td>
+      <td id="T_6e5de_row57_col5" class="data row57 col5" >$481</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</section>
+<hr>
+<section id="section-1">
+<h2 class="section-title">Assessment Ratio Map</h2>
+<div class="notebook-content"><h3>02 — Assessment Ratio Map</h3>
+<p>Choropleth map of California counties colored by **assessment ratio** (assessed value / market value).</p>
+<li>**Lower ratio** → assessed value is far below market value → **greater Prop 13 benefit** (long-tenure owners)</li>
+<li>**Higher ratio** → assessed value close to market value → recent purchases or new construction</li>
+<p>Under Prop 13, properties are reassessed to market value only upon sale. Long-held homes retain 1978-era assessments grown at ≤2%/year, creating large gaps in high-appreciation areas.</p>
+<pre class="output-text">Loaded 58 counties
+</pre>
+<div id="plotly-4f94b1c1ecf8" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-4f94b1c1ecf8", [{"coloraxis": "coloraxis", "customdata": [[0.6841847188491236, 4005.515968133665, "06001"], [0.5735690304963411, 3071.560833333333, "06003"], [0.5547331696805329, 2474.8579180064307, "06005"], [0.6487364363007808, 1639.4268172806865, "06007"], [0.6757968980134871, 1657.633349865382, "06009"], [0.5620806318130008, 2065.324370465215, "06011"], [0.7150649343626508, 3107.7178929107695, "06013"], [0.5902474281402192, 1564.8478743068383, "06015"], [0.6714224221794959, 2426.175626801781, "06017"], [0.7141982709915417, 1240.963204314169, "06019"], [0.5969799921204186, 1718.0707246867585, "06021"], [0.5724938632455221, 2110.312165347973, "06023"], [0.7763115208597784, 709.376841678342, "06025"], [0.5787853609608266, 1532.926110467362, "06027"], [0.8656517145764678, 481.3815963933689, "06029"], [0.7003759082363024, 1041.3549866243102, "06031"], [0.604530823173938, 1586.8298642779582, "06033"], [0.6840741738422104, 904.488843581797, "06035"], [0.6094398778072226, 4189.939209645372, "06037"], [0.6365593248659775, 1692.3079564051673, "06039"], [0.6781900379285511, 5913.420295286255, "06041"], [0.5628363442960513, 2008.039382583868, "06043"], [0.5590888650333303, 2807.9736409427865, "06045"], [0.6053374871325888, 1731.7748278829606, "06047"], [0.580920287639459, 1331.992452092296, "06049"], [0.6817004863080286, 2017.8473684210528, "06051"], [0.5713326292783552, 4198.03684518498, "06053"], [0.5609738511458287, 4985.962504676392, "06055"], [0.6631211975313775, 2319.225819354838, "06057"], [0.6088548710989142, 4511.23679503913, "06059"], [0.7543820098178639, 1875.021862927076, "06061"], [0.6096060995179766, 1604.219890420056, "06063"], [0.8108554168856975, 1066.2579491690683, "06065"], [0.7107103198252233, 1645.142597607282, "06067"], [0.7237361545740134, 2351.9805990677764, "06069"], [0.7010825023872977, 1585.2704441770752, "06071"], [0.637162845597104, 3516.2669096142085, "06073"], [0.5854054600154543, 7582.194025891873, "06075"], [0.7155814839604154, 1618.0590212864572, "06077"], [0.5980613270459212, 3688.5949098178457, "06079"], [0.5283502068201309, 9628.376817396163, "06081"], [0.5341848149889756, 5593.239303807182, "06083"], [0.5911077890903025, 7410.137071118596, "06085"], [0.5689940383082362, 5144.786989213856, "06087"], [0.6458444739860639, 1456.4879607410762, "06089"], [0.6275886250647298, 1696.9990425531914, "06091"], [0.5854132016807374, 1443.942365034526, "06093"], [0.7224619835238283, 1766.8633972075506, "06095"], [0.5967425286695182, 4013.585428622745, "06097"], [0.6731848864062432, 1602.6267941594035, "06099"], [0.7009692949715836, 1390.5664329268293, "06101"], [0.5982342030955679, 1479.8595641646484, "06103"], [0.2938866086069671, 4655.851661086788, "06105"], [0.6636506904262296, 1223.8515753307825, "06107"], [0.547735893963371, 2447.9442351833327, "06109"], [0.6406968405670386, 3240.579677190994, "06111"], [0.7215310648146994, 1964.1305776591448, "06113"], [0.7237137277420439, 1161.5748464083172, "06115"]], "geo": "geo", "geojson": "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json", "hovertemplate": "<b>%{hovertext}</b><br><br>Assessment Ratio=%{z:.1%}<br>Annual Tax Gap/HH=%{customdata[1]:$,.0f}<extra></extra>", "hovertext": ["Alameda", "Alpine", "Amador", "Butte", "Calaveras", "Colusa", "Contra Costa", "Del Norte", "El Dorado", "Fresno", "Glenn", "Humboldt", "Imperial", "Inyo", "Kern", "Kings", "Lake", "Lassen", "Los Angeles", "Madera", "Marin", "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", "Monterey", "Napa", "Nevada", "Orange", "Placer", "Plumas", "Riverside", "Sacramento", "San Benito", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "San Mateo", "Santa Barbara", "Santa Clara", "Santa Cruz", "Shasta", "Sierra", "Siskiyou", "Solano", "Sonoma", "Stanislaus", "Sutter", "Tehama", "Trinity", "Tulare", "Tuolumne", "Ventura", "Yolo", "Yuba"], "locations": ["06001", "06003", "06005", "06007", "06009", "06011", "06013", "06015", "06017", "06019", "06021", "06023", "06025", "06027", "06029", "06031", "06033", "06035", "06037", "06039", "06041", "06043", "06045", "06047", "06049", "06051", "06053", "06055", "06057", "06059", "06061", "06063", "06065", "06067", "06069", "06071", "06073", "06075", "06077", "06079", "06081", "06083", "06085", "06087", "06089", "06091", "06093", "06095", "06097", "06099", "06101", "06103", "06105", "06107", "06109", "06111", "06113", "06115"], "name": "", "type": "choropleth", "z": {"bdata": "eSj8Wdfk5T/lXX9wrVriPwwZucZfwOE/iFU06nLC5D/7mPbQIKDlP2dCa4WQ/OE/vVNz28/h5j+aIQ2TTuPiPzv8IeBKfOU/35YYVbba5j/OwNDIdRrjP1qbeabeUeI/gjkzQovX6D+pXpfgaIXiP9ehejlrs+s/uP+YvHpp5j+9l14GUVjjP60YloXv4+U/oe0BD4iA4z8+bEipsV7kPzsJLJi7s+U/Og54XcEC4j94B9xUDuThP4/fyLjsXuM/CtKfJOaW4j9nh8uJfdDlP1xsvF1bSOI/5KMSb3/z4T/azxXySTjlPwsq7DW9e+M/o3ibveUj6D8K5pum5IHjP1/fKQ+H8uk/c4eSkSO+5j+FgFq52CjnPyKkcZJEb+Y/hRsCVqNj5D+cUTU7pLviP9N15yML5uY/VkQVglEj4z/UEmSxPujgPwC4zMAKGOE/CLjR4Vrq4j8d5ET8MjXiP6dRwgfCquQ/7tN/vTQV5D+EsXt3tLviP/3R+pdoHuc/05KYyYMY4z9d1+gHu4rlP27mrChXbuY/Wpw0Drwk4z/vwCzHCc/SP7gma1+gPOU/RmDtbA2H4T/CWRyploDkP4urzVDIFuc/uy8Ksako5z8=", "dtype": "f8"}}], {"coloraxis": {"cmax": 1.0, "cmin": 0.3, "colorbar": {"tickformat": ".0%", "title": {"text": "Assessment<br>Ratio"}}, "colorscale": [[0.0, "rgb(165,0,38)"], [0.1, "rgb(215,48,39)"], [0.2, "rgb(244,109,67)"], [0.3, "rgb(253,174,97)"], [0.4, "rgb(254,224,139)"], [0.5, "rgb(255,255,191)"], [0.6, "rgb(217,239,139)"], [0.7, "rgb(166,217,106)"], [0.8, "rgb(102,189,99)"], [0.9, "rgb(26,152,80)"], [1.0, "rgb(0,104,55)"]]}, "geo": {"center": {}, "domain": {"x": [0.0, 1.0], "y": [0.0, 1.0]}, "fitbounds": "locations", "scope": "usa", "visible": false}, "height": 600, "legend": {"tracegroupgap": 0}, "margin": {"b": 0, "l": 0, "r": 0, "t": 60}, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Prop 13 Assessment Ratio by CA County<br><sup>Assessed Value \u00f7 Market Value \u2014 lower = more Prop 13 benefit</sup>"}, "autosize": true}, {"responsive": true, "displayModeBar": false});
+</script>
+<pre class="output-text">Most Prop 13 benefit (lowest assessment ratio):
+       county  assessment_ratio  tax_gap_per_household
+      Trinity          0.293887            4655.851661
+    San Mateo          0.528350            9628.376817
+Santa Barbara          0.534185            5593.239304
+     Tuolumne          0.547736            2447.944235
+       Amador          0.554733            2474.857918
+
+Least Prop 13 benefit (highest assessment ratio):
+    county  assessment_ratio  tax_gap_per_household
+      Kern          0.865652             481.381596
+ Riverside          0.810855            1066.257949
+  Imperial          0.776312             709.376842
+    Placer          0.754382            1875.021863
+San Benito          0.723736            2351.980599
+</pre></div>
+</section>
+<hr>
+<section id="section-2">
+<h2 class="section-title">Top Bottom Counties</h2>
+<div class="notebook-content"><h3>03 — Top & Bottom Counties by Prop 13 Benefit</h3>
+<p>Bar charts ranking counties by:</p>
+<p>1. Assessment ratio (lowest = greatest Prop 13 benefit)</p>
+<p>2. Annual tax gap per household (dollars underpaid vs. market-rate assessment)</p>
+<div id="plotly-d23872e0f610" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-d23872e0f610", [{"hovertemplate": "County=%{x}<br>Assessment Ratio (%)=%{marker.color:.1f}<extra></extra>", "legendgroup": "", "marker": {"color": {"bdata": "de01R39jPUBrXSz14WpKQIDfP82QtUpAbeYy+gRjS0AjN4GmlbxLQKzLl2RW9EtAFCCNHXcMTEDBl3fQoRpMQDuWCyJOJExAbaQrqh9zTEBQaXbCDpFMQL0CHuTrn0xAtgLH/66tTEDog+zec/BMQDC4OZnHC01AhE+DnDBFTUBeRbH6SUVNQIGExMUqg01AjK/XAC6OTUBqZf7qTdZNQEItxglY2U1AxjpBWy/nTUBNNDLWZelNQBfN85n+OU5AT9254FFETkCxAUGkV3FOQEwDc5fUeE5AcJdTRPV6TkAkuxdoImFPQCEpgZj1009AAEtjNq/bT0AgJh60dQRQQMrPD5ZnJVBA0uL4xuk3UEBiCiHF+ZNQQEC2i0pdl1BADo0afxrJUEBB6C0eYtRQQISnQKMZ5VBANmfijmr0UEDIAacT4gpRQEdDXSATGlFAn/9MPsgaUUDIh1fjZ4JRQAYUxxc0hlFAO8hoku2GUUDSebrJi8RRQN41e3Le2lFAbBlyY2rgUUAN1Ay0uONRQAWuIH/MCVJADvS7tsEPUkBK9U+SxBdSQGi0zlDpF1JAP3YhfAvcUkDuBLjLZGhTQIK22IN5RVRAcM7nxCukVUA=", "dtype": "f8"}, "coloraxis": "coloraxis", "pattern": {"shape": ""}}, "name": "", "orientation": "v", "showlegend": false, "textposition": "auto", "type": "bar", "x": ["Trinity", "San Mateo", "Santa Barbara", "Tuolumne", "Amador", "Mendocino", "Napa", "Colusa", "Mariposa", "Santa Cruz", "Monterey", "Humboldt", "Alpine", "Inyo", "Modoc", "San Francisco", "Siskiyou", "Del Norte", "Santa Clara", "Sonoma", "Glenn", "San Luis Obispo", "Tehama", "Lake", "Merced", "Orange", "Los Angeles", "Plumas", "Sierra", "Madera", "San Diego", "Ventura", "Shasta", "Butte", "Nevada", "Tulare", "El Dorado", "Stanislaus", "Calaveras", "Marin", "Mono", "Lassen", "Alameda", "Kings", "Sutter", "San Bernardino", "Sacramento", "Fresno", "Contra Costa", "San Joaquin", "Yolo", "Solano", "Yuba", "San Benito", "Placer", "Imperial", "Riverside", "Kern"], "xaxis": "x", "y": {"bdata": "de01R39jPUBrXSz14WpKQIDfP82QtUpAbeYy+gRjS0AjN4GmlbxLQKzLl2RW9EtAFCCNHXcMTEDBl3fQoRpMQDuWCyJOJExAbaQrqh9zTEBQaXbCDpFMQL0CHuTrn0xAtgLH/66tTEDog+zec/BMQDC4OZnHC01AhE+DnDBFTUBeRbH6SUVNQIGExMUqg01AjK/XAC6OTUBqZf7qTdZNQEItxglY2U1AxjpBWy/nTUBNNDLWZelNQBfN85n+OU5AT9254FFETkCxAUGkV3FOQEwDc5fUeE5AcJdTRPV6TkAkuxdoImFPQCEpgZj1009AAEtjNq/bT0AgJh60dQRQQMrPD5ZnJVBA0uL4xuk3UEBiCiHF+ZNQQEC2i0pdl1BADo0afxrJUEBB6C0eYtRQQISnQKMZ5VBANmfijmr0UEDIAacT4gpRQEdDXSATGlFAn/9MPsgaUUDIh1fjZ4JRQAYUxxc0hlFAO8hoku2GUUDSebrJi8RRQN41e3Le2lFAbBlyY2rgUUAN1Ay0uONRQAWuIH/MCVJADvS7tsEPUkBK9U+SxBdSQGi0zlDpF1JAP3YhfAvcUkDuBLjLZGhTQIK22IN5RVRAcM7nxCukVUA=", "dtype": "f8"}, "yaxis": "y"}], {"annotations": [{"showarrow": false, "text": "100% = fully assessed at market value", "x": 1, "xanchor": "right", "xref": "x domain", "y": 100, "yanchor": "bottom", "yref": "y"}], "barmode": "relative", "coloraxis": {"cmax": 100, "cmin": 30, "colorbar": {"title": {"text": "Assessment Ratio (%)"}}, "colorscale": [[0.0, "rgb(165,0,38)"], [0.1, "rgb(215,48,39)"], [0.2, "rgb(244,109,67)"], [0.3, "rgb(253,174,97)"], [0.4, "rgb(254,224,139)"], [0.5, "rgb(255,255,191)"], [0.6, "rgb(217,239,139)"], [0.7, "rgb(166,217,106)"], [0.8, "rgb(102,189,99)"], [0.9, "rgb(26,152,80)"], [1.0, "rgb(0,104,55)"]], "showscale": false}, "height": 500, "legend": {"tracegroupgap": 0}, "margin": {"b": 160, "t": 80, "l": 10, "r": 10}, "shapes": [{"line": {"color": "gray", "dash": "dash"}, "type": "line", "x0": 0, "x1": 1, "xref": "x domain", "y0": 100, "y1": 100, "yref": "y"}], "showlegend": false, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Assessment Ratio by CA County \u2014 Lowest First<br><sup>Counties with low ratios have large gaps between taxable value and market value</sup>"}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "tickangle": -60, "title": {"text": "County"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "title": {"text": "Assessment Ratio (%)"}}, "autosize": true}, {"responsive": true, "displayModeBar": false});
+</script>
+<div id="plotly-b9106a81b030" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-b9106a81b030", [{"hovertemplate": "Annual Tax Gap per Household ($)=%{marker.color}<br>=%{y}<extra></extra>", "legendgroup": "", "marker": {"color": {"bdata": "imgHQbdVo0ChzhCB8u+lQFjyiyUf/6dAktuoj29HqEAd43LLKFGpQAeAYKiIeKtAbwcFmDDRrEC9p/ksCEuvQKrpTL0rW69A9hYLcPBdsECBoK9uCWawQOuEmZ48n7FACAN2BtovskBa27Rm9nmzQNEHIHjJGLRAqKkDQz3ZtUAhzXiYaxm3QJnDFxcj8rxALEyuqzGevUCLbI07MM7CQA==", "dtype": "f8"}, "coloraxis": "coloraxis", "pattern": {"shape": ""}}, "name": "", "orientation": "h", "showlegend": false, "text": {"bdata": "imgHQbdVo0ChzhCB8u+lQFjyiyUf/6dAktuoj29HqEAd43LLKFGpQAeAYKiIeKtAbwcFmDDRrEC9p/ksCEuvQKrpTL0rW69A9hYLcPBdsECBoK9uCWawQOuEmZ48n7FACAN2BtovskBa27Rm9nmzQNEHIHjJGLRAqKkDQz3ZtUAhzXiYaxm3QJnDFxcj8rxALEyuqzGevUCLbI07MM7CQA==", "dtype": "f8"}, "textposition": "outside", "texttemplate": "$%{x:,.0f}", "type": "bar", "x": {"bdata": "imgHQbdVo0ChzhCB8u+lQFjyiyUf/6dAktuoj29HqEAd43LLKFGpQAeAYKiIeKtAbwcFmDDRrEC9p/ksCEuvQKrpTL0rW69A9hYLcPBdsECBoK9uCWawQOuEmZ48n7FACAN2BtovskBa27Rm9nmzQNEHIHjJGLRAqKkDQz3ZtUAhzXiYaxm3QJnDFxcj8rxALEyuqzGevUCLbI07MM7CQA==", "dtype": "f8"}, "xaxis": "x", "y": ["Amador", "Mendocino", "Alpine", "Contra Costa", "Ventura", "San Diego", "San Luis Obispo", "Alameda", "Sonoma", "Los Angeles", "Monterey", "Orange", "Trinity", "Napa", "Santa Cruz", "Santa Barbara", "Marin", "Santa Clara", "San Francisco", "San Mateo"], "yaxis": "y"}], {"barmode": "relative", "coloraxis": {"colorbar": {"title": {"text": "Annual Tax Gap per Household ($)"}}, "colorscale": [[0.0, "rgb(255,245,240)"], [0.125, "rgb(254,224,210)"], [0.25, "rgb(252,187,161)"], [0.375, "rgb(252,146,114)"], [0.5, "rgb(251,106,74)"], [0.625, "rgb(239,59,44)"], [0.75, "rgb(203,24,29)"], [0.875, "rgb(165,15,21)"], [1.0, "rgb(103,0,13)"]], "showscale": false}, "height": 520, "legend": {"tracegroupgap": 0}, "margin": {"b": 40, "l": 120, "r": 80, "t": 80}, "showlegend": false, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Top 20 Counties: Annual Tax Gap per Owner-Occupied Household<br><sup>Estimated dollars underpaid relative to full market-value assessment</sup>"}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "tickformat": ",.0f", "tickprefix": "$", "title": {"text": "Annual Tax Gap per Household ($)"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "title": {"text": ""}}, "autosize": true}, {"responsive": true, "displayModeBar": false});
+</script>
+<div id="plotly-4396306a8178" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-4396306a8178", [{"hovertemplate": "Annual Tax Gap ($M)=%{marker.color}<br>=%{y}<extra></extra>", "legendgroup": "", "marker": {"color": {"bdata": "7fpgdFTAakBQVKKRtMxsQAtJwa4B6G5Azt1T3pPvcUCZqsXxLZpyQIEGUa2UjnhAZocJtGVTe0Bs8xDXW1R9QNicOdqX5YBAcoaYAe0egUAp3PKRpOGBQErDlVg++INA4jYJlMOlikAdEI2TP3uQQKEe7F443pNAt/EnKsusl0A/7Dt1fx+hQHCHl/FI7qRAM1TWgC5ApUBvxKQJeWe5QA==", "dtype": "f8"}, "coloraxis": "coloraxis", "pattern": {"shape": ""}}, "name": "", "orientation": "h", "showlegend": false, "text": {"bdata": "7fpgdFTAakBQVKKRtMxsQAtJwa4B6G5Azt1T3pPvcUCZqsXxLZpyQIEGUa2UjnhAZocJtGVTe0Bs8xDXW1R9QNicOdqX5YBAcoaYAe0egUAp3PKRpOGBQErDlVg++INA4jYJlMOlikAdEI2TP3uQQKEe7F443pNAt/EnKsusl0A/7Dt1fx+hQHCHl/FI7qRAM1TWgC5ApUBvxKQJeWe5QA==", "dtype": "f8"}, "textposition": "outside", "texttemplate": "$%{x:,.0f}M", "type": "bar", "x": {"bdata": "7fpgdFTAakBQVKKRtMxsQAtJwa4B6G5Azt1T3pPvcUCZqsXxLZpyQIEGUa2UjnhAZocJtGVTe0Bs8xDXW1R9QNicOdqX5YBAcoaYAe0egUAp3PKRpOGBQErDlVg++INA4jYJlMOlikAdEI2TP3uQQKEe7F443pNAt/EnKsusl0A/7Dt1fx+hQHCHl/FI7qRAM1TWgC5ApUBvxKQJeWe5QA==", "dtype": "f8"}, "xaxis": "x", "y": ["Fresno", "San Joaquin", "San Luis Obispo", "Monterey", "Santa Cruz", "Marin", "Santa Barbara", "Sonoma", "Sacramento", "Riverside", "Ventura", "San Bernardino", "Contra Costa", "San Francisco", "Alameda", "San Mateo", "San Diego", "Santa Clara", "Orange", "Los Angeles"], "yaxis": "y"}], {"barmode": "relative", "coloraxis": {"colorbar": {"title": {"text": "Annual Tax Gap ($M)"}}, "colorscale": [[0.0, "rgb(255,245,235)"], [0.125, "rgb(254,230,206)"], [0.25, "rgb(253,208,162)"], [0.375, "rgb(253,174,107)"], [0.5, "rgb(253,141,60)"], [0.625, "rgb(241,105,19)"], [0.75, "rgb(217,72,1)"], [0.875, "rgb(166,54,3)"], [1.0, "rgb(127,39,4)"]], "showscale": false}, "height": 520, "legend": {"tracegroupgap": 0}, "margin": {"b": 40, "l": 160, "r": 100, "t": 80}, "showlegend": false, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Top 20 Counties: Total Annual Property Tax Gap ($M)<br><sup>Total estimated revenue gap from Prop 13 assessment limits</sup>"}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "tickformat": ",.0f", "tickprefix": "$", "ticksuffix": "M", "title": {"text": "Annual Tax Gap ($M)"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "title": {"text": ""}}, "autosize": true}, {"responsive": true, "displayModeBar": false});
+</script></div>
+</section>
+<hr>
+<section id="section-3">
+<h2 class="section-title">Revenue Gap Map</h2>
+<div class="notebook-content"><h3>04 — Revenue Gap Map</h3>
+<p>Maps the **total annual property tax revenue gap** by county — the estimated additional tax revenue</p>
+<p>that would be collected if all residential properties were assessed at current market value</p>
+<p>instead of their Prop 13-limited assessed values.</p>
+<p>Formula: `Tax Gap ($) = (Market Value − Assessed Value) × 1.1%`</p>
+<p>The 1.1% rate approximates California's 1% base rate plus average local special assessments/bonds.</p>
+<pre class="output-text">Statewide annual residential property tax gap: $25,629M
+That is $25.6B per year statewide
+</pre>
+<div id="plotly-b49f1ccc6232" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-b49f1ccc6232", [{"coloraxis": "coloraxis", "customdata": [[1271.5550495999998, 4005.515968133665, 0.6841847188491236, "06001"], [1.1057619, 3071.560833333333, 0.5735690304963411, "06003"], [30.787232499999995, 2474.8579180064307, 0.5547331696805329, "06005"], [79.38760419999996, 1639.4268172806865, 0.6487364363007808, "06007"], [23.3958371, 1657.633349865382, 0.6757968980134871, "06009"], [9.678109999999998, 2065.324370465215, 0.5620806318130008, "06011"], [852.7204972000002, 3107.7178929107695, 0.7150649343626508, "06013"], [10.158992399999995, 1564.8478743068383, 0.5902474281402192, "06015"], [138.86216199999996, 2426.175626801781, 0.6714224221794959, "06017"], [214.0103094, 1240.963204314169, 0.7141982709915417, "06019"], [10.146925699999995, 1718.0707246867585, 0.5969799921204186, "06021"], [65.34581619999999, 2110.312165347973, 0.5724938632455221, "06023"], [19.23971869999999, 709.376841678342, 0.7763115208597784, "06025"], [7.937491400000001, 1532.926110467362, 0.5787853609608266, "06027"], [79.65565689999993, 481.3815963933689, 0.8656517145764678, "06029"], [24.913376699999997, 1041.3549866243102, 0.7003759082363024, "06031"], [29.22940609999999, 1586.8298642779582, 0.604530823173938, "06033"], [5.545421099999998, 904.488843581797, 0.6840741738422104, "06035"], [6503.472803399999, 4189.939209645372, 0.6094398778072226, "06037"], [48.60139219999999, 1692.3079564051673, 0.6365593248659775, "06039"], [392.9112980999999, 5913.420295286255, 0.6781900379285511, "06041"], [11.253052699999996, 2008.039382583868, 0.5628363442960513, "06043"], [59.0909973, 2807.9736409427865, 0.5590888650333303, "06045"], [76.46824930000001, 1731.7748278829606, 0.6053374871325888, "06047"], [3.4059047000000007, 1331.992452092296, 0.580920287639459, "06049"], [7.5528027, 2017.8473684210528, 0.6817004863080286, "06051"], [286.9736007, 4198.03684518498, 0.5713326292783552, "06053"], [159.92973329999995, 4985.962504676392, 0.5609738511458287, "06055"], [71.89600039999999, 2319.225819354838, 0.6631211975313775, "06057"], [2720.090826699999, 4511.23679503913, 0.6088548710989142, "06059"], [211.1218367, 1875.021862927076, 0.7543820098178639, "06061"], [9.662216399999998, 1604.219890420056, 0.6096060995179766, "06063"], [547.8657256999998, 1066.2579491690683, 0.8108554168856975, "06065"], [540.6991466999998, 1645.142597607282, 0.7107103198252233, "06067"], [30.780370099999992, 2351.9805990677764, 0.7237361545740134, "06069"], [639.0304423999999, 1585.2704441770752, 0.7010825023872977, "06071"], [2191.7489413, 3516.2669096142085, 0.637162845597104, "06073"], [1054.8120862999997, 7582.194025891873, 0.5854054600154543, "06075"], [230.3970420999999, 1618.0590212864572, 0.7155814839604154, "06077"], [247.2502054, 3688.5949098178457, 0.5980613270459212, "06079"], [1515.198403, 9628.376817396163, 0.5283502068201309, "06081"], [437.2123298999999, 5593.239303807182, 0.5341848149889756, "06083"], [2679.1424681999997, 7410.137071118596, 0.5911077890903025, "06085"], [297.63621689999997, 5144.786989213856, 0.5689940383082362, "06087"], [67.37276359999997, 1456.4879607410762, 0.6458444739860639, "06089"], [1.5951791, 1696.9990425531914, 0.6275886250647298, "06091"], [18.4016015, 1443.942365034526, 0.5854132016807374, "06093"], [172.60841900000003, 1766.8633972075506, 0.7224619835238283, "06095"], [469.2724218999999, 4013.585428622745, 0.5967425286695182, "06097"], [170.45378319999998, 1602.6267941594035, 0.6731848864062432, "06099"], [27.3663474, 1390.5664329268293, 0.7009692949715836, "06101"], [24.447279999999992, 1479.8595641646484, 0.5982342030955679, "06103"], [18.078672, 4655.851661086788, 0.2938866086069671, "06105"], [100.45128959999997, 1223.8515753307825, 0.6636506904262296, "06107"], [41.59302050000001, 2447.9442351833327, 0.547735893963371, "06109"], [572.2053564999998, 3240.579677190994, 0.6406968405670386, "06111"], [77.99955349999996, 1964.1305776591448, 0.7215310648146994, "06113"], [19.66313899999999, 1161.5748464083172, 0.7237137277420439, "06115"]], "geo": "geo", "geojson": "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json", "hovertemplate": "<b>%{hovertext}</b><br><br>Annual Gap ($M)=%{z:$,.0f}<br>Gap per HH ($)=%{customdata[1]:$,.0f}<br>Assessment Ratio=%{customdata[2]:.1%}<extra></extra>", "hovertext": ["Alameda", "Alpine", "Amador", "Butte", "Calaveras", "Colusa", "Contra Costa", "Del Norte", "El Dorado", "Fresno", "Glenn", "Humboldt", "Imperial", "Inyo", "Kern", "Kings", "Lake", "Lassen", "Los Angeles", "Madera", "Marin", "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", "Monterey", "Napa", "Nevada", "Orange", "Placer", "Plumas", "Riverside", "Sacramento", "San Benito", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "San Mateo", "Santa Barbara", "Santa Clara", "Santa Cruz", "Shasta", "Sierra", "Siskiyou", "Solano", "Sonoma", "Stanislaus", "Sutter", "Tehama", "Trinity", "Tulare", "Tuolumne", "Ventura", "Yolo", "Yuba"], "locations": ["06001", "06003", "06005", "06007", "06009", "06011", "06013", "06015", "06017", "06019", "06021", "06023", "06025", "06027", "06029", "06031", "06033", "06035", "06037", "06039", "06041", "06043", "06045", "06047", "06049", "06051", "06053", "06055", "06057", "06059", "06061", "06063", "06065", "06067", "06069", "06071", "06073", "06075", "06077", "06079", "06081", "06083", "06085", "06087", "06089", "06091", "06093", "06095", "06097", "06099", "06101", "06103", "06105", "06107", "06109", "06111", "06113", "06115"], "name": "", "type": "choropleth", "z": {"bdata": "oR7sXjjek0DsmtpjM7HxPyrZsRGIyT5AsbLYgc7YU0AiC4eUVWU3QF0u4jsxWyNA4jYJlMOlikAEoKxzZ1EkQFI7w9SWW2FA7fpgdFTAakA/4mjYOUskQFNbRdohVlBAVr1oNF49M0ACIN2+/b8fQF+5W0j26VNAq20vDtPpOEC8ALFbujo9QH8xbN6CLhZAb8SkCXlnuUDkiGtr+kxIQIEGUa2UjnhAN1SdH5CBJkAcw63MpYtNQP936cv3HVNAcFee9ko/C0DfjzbpETYeQM7dU96T73FAELAMYMD9Y0D8zA8SWPlRQDNU1oAuQKVAez4UFuZjakDsvykHDlMjQHKGmAHtHoFA2Jw52pflgEC2RrpVxsc+QErDlVg++INAP+w7dX8foUAdEI2TP3uQQFBUopG0zGxAC0nBrgHobkC38Scqy6yXQGaHCbRlU3tAcIeX8UjupECZqsXxLZpyQOfI21vb11BAEzQchdqF+T9Jhhxbz2YyQHxoHyt4k2VAbPMQ11tUfUAsb1hkhU5lQIH5dfHIXTtApCcs8YByOEBlHCPZIxQyQJZBxu3hHFlAxq2CGOjLREAp3PKRpOGBQIpGPq/4f1NAvbM9esOpM0A=", "dtype": "f8"}}], {"coloraxis": {"colorbar": {"tickprefix": "$", "ticksuffix": "M", "title": {"text": "Annual Gap<br>($M)"}}, "colorscale": [[0.0, "rgb(255,255,204)"], [0.125, "rgb(255,237,160)"], [0.25, "rgb(254,217,118)"], [0.375, "rgb(254,178,76)"], [0.5, "rgb(253,141,60)"], [0.625, "rgb(252,78,42)"], [0.75, "rgb(227,26,28)"], [0.875, "rgb(189,0,38)"], [1.0, "rgb(128,0,38)"]]}, "geo": {"center": {}, "domain": {"x": [0.0, 1.0], "y": [0.0, 1.0]}, "fitbounds": "locations", "scope": "usa", "visible": false}, "height": 600, "legend": {"tracegroupgap": 0}, "margin": {"b": 0, "l": 0, "r": 0, "t": 60}, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Annual Property Tax Revenue Gap by CA County ($M)<br><sup>Estimated additional revenue if all homes assessed at market value</sup>"}, "autosize": true}, {"responsive": true, "displayModeBar": false});
+</script>
+<div id="plotly-f87e4da73c15" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-f87e4da73c15", [{"coloraxis": "coloraxis", "customdata": [[4005.515968133665, 0.6841847188491236, "06001"], [3071.560833333333, 0.5735690304963411, "06003"], [2474.8579180064307, 0.5547331696805329, "06005"], [1639.4268172806865, 0.6487364363007808, "06007"], [1657.633349865382, 0.6757968980134871, "06009"], [2065.324370465215, 0.5620806318130008, "06011"], [3107.7178929107695, 0.7150649343626508, "06013"], [1564.8478743068383, 0.5902474281402192, "06015"], [2426.175626801781, 0.6714224221794959, "06017"], [1240.963204314169, 0.7141982709915417, "06019"], [1718.0707246867585, 0.5969799921204186, "06021"], [2110.312165347973, 0.5724938632455221, "06023"], [709.376841678342, 0.7763115208597784, "06025"], [1532.926110467362, 0.5787853609608266, "06027"], [481.3815963933689, 0.8656517145764678, "06029"], [1041.3549866243102, 0.7003759082363024, "06031"], [1586.8298642779582, 0.604530823173938, "06033"], [904.488843581797, 0.6840741738422104, "06035"], [4189.939209645372, 0.6094398778072226, "06037"], [1692.3079564051673, 0.6365593248659775, "06039"], [5913.420295286255, 0.6781900379285511, "06041"], [2008.039382583868, 0.5628363442960513, "06043"], [2807.9736409427865, 0.5590888650333303, "06045"], [1731.7748278829606, 0.6053374871325888, "06047"], [1331.992452092296, 0.580920287639459, "06049"], [2017.8473684210528, 0.6817004863080286, "06051"], [4198.03684518498, 0.5713326292783552, "06053"], [4985.962504676392, 0.5609738511458287, "06055"], [2319.225819354838, 0.6631211975313775, "06057"], [4511.23679503913, 0.6088548710989142, "06059"], [1875.021862927076, 0.7543820098178639, "06061"], [1604.219890420056, 0.6096060995179766, "06063"], [1066.2579491690683, 0.8108554168856975, "06065"], [1645.142597607282, 0.7107103198252233, "06067"], [2351.9805990677764, 0.7237361545740134, "06069"], [1585.2704441770752, 0.7010825023872977, "06071"], [3516.2669096142085, 0.637162845597104, "06073"], [7582.194025891873, 0.5854054600154543, "06075"], [1618.0590212864572, 0.7155814839604154, "06077"], [3688.5949098178457, 0.5980613270459212, "06079"], [9628.376817396163, 0.5283502068201309, "06081"], [5593.239303807182, 0.5341848149889756, "06083"], [7410.137071118596, 0.5911077890903025, "06085"], [5144.786989213856, 0.5689940383082362, "06087"], [1456.4879607410762, 0.6458444739860639, "06089"], [1696.9990425531914, 0.6275886250647298, "06091"], [1443.942365034526, 0.5854132016807374, "06093"], [1766.8633972075506, 0.7224619835238283, "06095"], [4013.585428622745, 0.5967425286695182, "06097"], [1602.6267941594035, 0.6731848864062432, "06099"], [1390.5664329268293, 0.7009692949715836, "06101"], [1479.8595641646484, 0.5982342030955679, "06103"], [4655.851661086788, 0.2938866086069671, "06105"], [1223.8515753307825, 0.6636506904262296, "06107"], [2447.9442351833327, 0.547735893963371, "06109"], [3240.579677190994, 0.6406968405670386, "06111"], [1964.1305776591448, 0.7215310648146994, "06113"], [1161.5748464083172, 0.7237137277420439, "06115"]], "geo": "geo", "geojson": "https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json", "hovertemplate": "<b>%{hovertext}</b><br><br>Annual Gap per HH ($)=%{z:$,.0f}<br>Assessment Ratio=%{customdata[1]:.1%}<extra></extra>", "hovertext": ["Alameda", "Alpine", "Amador", "Butte", "Calaveras", "Colusa", "Contra Costa", "Del Norte", "El Dorado", "Fresno", "Glenn", "Humboldt", "Imperial", "Inyo", "Kern", "Kings", "Lake", "Lassen", "Los Angeles", "Madera", "Marin", "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", "Monterey", "Napa", "Nevada", "Orange", "Placer", "Plumas", "Riverside", "Sacramento", "San Benito", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "San Mateo", "Santa Barbara", "Santa Clara", "Santa Cruz", "Shasta", "Sierra", "Siskiyou", "Solano", "Sonoma", "Stanislaus", "Sutter", "Tehama", "Trinity", "Tulare", "Tuolumne", "Ventura", "Yolo", "Yuba"], "locations": ["06001", "06003", "06005", "06007", "06009", "06011", "06013", "06015", "06017", "06019", "06021", "06023", "06025", "06027", "06029", "06031", "06033", "06035", "06037", "06039", "06041", "06043", "06045", "06047", "06049", "06051", "06053", "06055", "06057", "06059", "06061", "06063", "06065", "06067", "06069", "06071", "06073", "06075", "06077", "06079", "06081", "06083", "06085", "06087", "06089", "06091", "06093", "06095", "06097", "06099", "06101", "06103", "06105", "06107", "06109", "06111", "06113", "06115"], "name": "", "type": "choropleth", "z": {"bdata": "vaf5LAhLr0BY8oslH/+nQIpoB0G3VaNAqteWD7WdmUD3+t2MiOaZQMa34hOmIqBAktuoj29HqED1iyk5ZHOYQOeTwetZ9KJA41I7Utpjk0CXYg1sSNiaQPrwItSffKBA/eGRxQMrhkA2Z01WtPOXQKjc0QQbFn5AuBedgWtFkEDM9/DHUcuYQGzl0ibpQ4xA9hYLcPBdsEAmg+xYO3GaQCHNeJhrGbdA+3boUyhgn0ChzhCB8u+lQGEFe2wZD5tACH1cRfjPlEBXIIy0Y4efQIGgr24JZrBAWtu0ZvZ5s0CrL5iecx6iQOuEmZ48n7FAJTM8YxZMnUBgS/Qq4RCZQLe00yMIqZBADm8bBZK0mUAtvRQR9l+iQLp/Ue8UxZhAB4BgqIh4q0AsTK6rMZ69QGh8E3A8SJlAbwcFmDDRrECLbI07MM7CQKipA0M92bVAmcMXFyPyvEDRByB4yRi0QJ4C+6vzwZZAFNUCBf+DmkC78Fb7xI+WQI3HZR50m5tAqulMvStbr0DZ/1PWgQqZQHBA/gZEupVA6p+WMXAfl0AIA3YG2i+yQCoPXQNoH5NAS0DLcuMfo0Ad43LLKFGpQHZeJraFsJ5AyG+JpEwmkkA=", "dtype": "f8"}}], {"coloraxis": {"colorbar": {"tickformat": ",.0f", "tickprefix": "$", "title": {"text": "Annual Gap<br>per HH"}}, "colorscale": [[0.0, "rgb(247,244,249)"], [0.125, "rgb(231,225,239)"], [0.25, "rgb(212,185,218)"], [0.375, "rgb(201,148,199)"], [0.5, "rgb(223,101,176)"], [0.625, "rgb(231,41,138)"], [0.75, "rgb(206,18,86)"], [0.875, "rgb(152,0,67)"], [1.0, "rgb(103,0,31)"]]}, "geo": {"center": {}, "domain": {"x": [0.0, 1.0], "y": [0.0, 1.0]}, "fitbounds": "locations", "scope": "usa", "visible": false}, "height": 600, "legend": {"tracegroupgap": 0}, "margin": {"b": 0, "l": 0, "r": 0, "t": 60}, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Annual Property Tax Gap per Owner-Occupied Household by County<br><sup>Individual household benefit from Prop 13 assessment limits</sup>"}, "autosize": true}, {"responsive": true, "displayModeBar": false});
+</script>
+<div class="table-wrapper"><style type="text/css">
+</style>
+<table id="T_585d3">
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_585d3_level0_col0" class="col_heading level0 col0" >County</th>
+      <th id="T_585d3_level0_col1" class="col_heading level0 col1" >Assessment Ratio</th>
+      <th id="T_585d3_level0_col2" class="col_heading level0 col2" >Market Value ($M)</th>
+      <th id="T_585d3_level0_col3" class="col_heading level0 col3" >Assessed Value ($M)</th>
+      <th id="T_585d3_level0_col4" class="col_heading level0 col4" >Annual Tax Gap ($M)</th>
+      <th id="T_585d3_level0_col5" class="col_heading level0 col5" >Gap per HH ($)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_585d3_level0_row0" class="row_heading level0 row0" >18</th>
+      <td id="T_585d3_row0_col0" class="data row0 col0" >Los Angeles</td>
+      <td id="T_585d3_row0_col1" class="data row0 col1" >60.9%</td>
+      <td id="T_585d3_row0_col2" class="data row0 col2" >$1,513,787M</td>
+      <td id="T_585d3_row0_col3" class="data row0 col3" >$922,562M</td>
+      <td id="T_585d3_row0_col4" class="data row0 col4" >$6,503M</td>
+      <td id="T_585d3_row0_col5" class="data row0 col5" >$4,190</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row1" class="row_heading level0 row1" >29</th>
+      <td id="T_585d3_row1_col0" class="data row1 col0" >Orange</td>
+      <td id="T_585d3_row1_col1" class="data row1 col1" >60.9%</td>
+      <td id="T_585d3_row1_col2" class="data row1 col2" >$632,198M</td>
+      <td id="T_585d3_row1_col3" class="data row1 col3" >$384,917M</td>
+      <td id="T_585d3_row1_col4" class="data row1 col4" >$2,720M</td>
+      <td id="T_585d3_row1_col5" class="data row1 col5" >$4,511</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row2" class="row_heading level0 row2" >42</th>
+      <td id="T_585d3_row2_col0" class="data row2 col0" >Santa Clara</td>
+      <td id="T_585d3_row2_col1" class="data row2 col1" >59.1%</td>
+      <td id="T_585d3_row2_col2" class="data row2 col2" >$595,654M</td>
+      <td id="T_585d3_row2_col3" class="data row2 col3" >$352,096M</td>
+      <td id="T_585d3_row2_col4" class="data row2 col4" >$2,679M</td>
+      <td id="T_585d3_row2_col5" class="data row2 col5" >$7,410</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row3" class="row_heading level0 row3" >36</th>
+      <td id="T_585d3_row3_col0" class="data row3 col0" >San Diego</td>
+      <td id="T_585d3_row3_col1" class="data row3 col1" >63.7%</td>
+      <td id="T_585d3_row3_col2" class="data row3 col2" >$549,144M</td>
+      <td id="T_585d3_row3_col3" class="data row3 col3" >$349,894M</td>
+      <td id="T_585d3_row3_col4" class="data row3 col4" >$2,192M</td>
+      <td id="T_585d3_row3_col5" class="data row3 col5" >$3,516</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row4" class="row_heading level0 row4" >40</th>
+      <td id="T_585d3_row4_col0" class="data row4 col0" >San Mateo</td>
+      <td id="T_585d3_row4_col1" class="data row4 col1" >52.8%</td>
+      <td id="T_585d3_row4_col2" class="data row4 col2" >$292,050M</td>
+      <td id="T_585d3_row4_col3" class="data row4 col3" >$154,305M</td>
+      <td id="T_585d3_row4_col4" class="data row4 col4" >$1,515M</td>
+      <td id="T_585d3_row4_col5" class="data row4 col5" >$9,628</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row5" class="row_heading level0 row5" >0</th>
+      <td id="T_585d3_row5_col0" class="data row5 col0" >Alameda</td>
+      <td id="T_585d3_row5_col1" class="data row5 col1" >68.4%</td>
+      <td id="T_585d3_row5_col2" class="data row5 col2" >$366,024M</td>
+      <td id="T_585d3_row5_col3" class="data row5 col3" >$250,428M</td>
+      <td id="T_585d3_row5_col4" class="data row5 col4" >$1,272M</td>
+      <td id="T_585d3_row5_col5" class="data row5 col5" >$4,006</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row6" class="row_heading level0 row6" >37</th>
+      <td id="T_585d3_row6_col0" class="data row6 col0" >San Francisco</td>
+      <td id="T_585d3_row6_col1" class="data row6 col1" >58.5%</td>
+      <td id="T_585d3_row6_col2" class="data row6 col2" >$231,291M</td>
+      <td id="T_585d3_row6_col3" class="data row6 col3" >$135,399M</td>
+      <td id="T_585d3_row6_col4" class="data row6 col4" >$1,055M</td>
+      <td id="T_585d3_row6_col5" class="data row6 col5" >$7,582</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row7" class="row_heading level0 row7" >6</th>
+      <td id="T_585d3_row7_col0" class="data row7 col0" >Contra Costa</td>
+      <td id="T_585d3_row7_col1" class="data row7 col1" >71.5%</td>
+      <td id="T_585d3_row7_col2" class="data row7 col2" >$272,062M</td>
+      <td id="T_585d3_row7_col3" class="data row7 col3" >$194,542M</td>
+      <td id="T_585d3_row7_col4" class="data row7 col4" >$853M</td>
+      <td id="T_585d3_row7_col5" class="data row7 col5" >$3,108</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row8" class="row_heading level0 row8" >35</th>
+      <td id="T_585d3_row8_col0" class="data row8 col0" >San Bernardino</td>
+      <td id="T_585d3_row8_col1" class="data row8 col1" >70.1%</td>
+      <td id="T_585d3_row8_col2" class="data row8 col2" >$194,347M</td>
+      <td id="T_585d3_row8_col3" class="data row8 col3" >$136,253M</td>
+      <td id="T_585d3_row8_col4" class="data row8 col4" >$639M</td>
+      <td id="T_585d3_row8_col5" class="data row8 col5" >$1,585</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row9" class="row_heading level0 row9" >55</th>
+      <td id="T_585d3_row9_col0" class="data row9 col0" >Ventura</td>
+      <td id="T_585d3_row9_col1" class="data row9 col1" >64.1%</td>
+      <td id="T_585d3_row9_col2" class="data row9 col2" >$144,777M</td>
+      <td id="T_585d3_row9_col3" class="data row9 col3" >$92,758M</td>
+      <td id="T_585d3_row9_col4" class="data row9 col4" >$572M</td>
+      <td id="T_585d3_row9_col5" class="data row9 col5" >$3,241</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row10" class="row_heading level0 row10" >32</th>
+      <td id="T_585d3_row10_col0" class="data row10 col0" >Riverside</td>
+      <td id="T_585d3_row10_col1" class="data row10 col1" >81.1%</td>
+      <td id="T_585d3_row10_col2" class="data row10 col2" >$263,322M</td>
+      <td id="T_585d3_row10_col3" class="data row10 col3" >$213,516M</td>
+      <td id="T_585d3_row10_col4" class="data row10 col4" >$548M</td>
+      <td id="T_585d3_row10_col5" class="data row10 col5" >$1,066</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row11" class="row_heading level0 row11" >33</th>
+      <td id="T_585d3_row11_col0" class="data row11 col0" >Sacramento</td>
+      <td id="T_585d3_row11_col1" class="data row11 col1" >71.1%</td>
+      <td id="T_585d3_row11_col2" class="data row11 col2" >$169,914M</td>
+      <td id="T_585d3_row11_col3" class="data row11 col3" >$120,760M</td>
+      <td id="T_585d3_row11_col4" class="data row11 col4" >$541M</td>
+      <td id="T_585d3_row11_col5" class="data row11 col5" >$1,645</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row12" class="row_heading level0 row12" >48</th>
+      <td id="T_585d3_row12_col0" class="data row12 col0" >Sonoma</td>
+      <td id="T_585d3_row12_col1" class="data row12 col1" >59.7%</td>
+      <td id="T_585d3_row12_col2" class="data row12 col2" >$105,791M</td>
+      <td id="T_585d3_row12_col3" class="data row12 col3" >$63,130M</td>
+      <td id="T_585d3_row12_col4" class="data row12 col4" >$469M</td>
+      <td id="T_585d3_row12_col5" class="data row12 col5" >$4,014</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row13" class="row_heading level0 row13" >41</th>
+      <td id="T_585d3_row13_col0" class="data row13 col0" >Santa Barbara</td>
+      <td id="T_585d3_row13_col1" class="data row13 col1" >53.4%</td>
+      <td id="T_585d3_row13_col2" class="data row13 col2" >$85,327M</td>
+      <td id="T_585d3_row13_col3" class="data row13 col3" >$45,580M</td>
+      <td id="T_585d3_row13_col4" class="data row13 col4" >$437M</td>
+      <td id="T_585d3_row13_col5" class="data row13 col5" >$5,593</td>
+    </tr>
+    <tr>
+      <th id="T_585d3_level0_row14" class="row_heading level0 row14" >20</th>
+      <td id="T_585d3_row14_col0" class="data row14 col0" >Marin</td>
+      <td id="T_585d3_row14_col1" class="data row14 col1" >67.8%</td>
+      <td id="T_585d3_row14_col2" class="data row14 col2" >$110,995M</td>
+      <td id="T_585d3_row14_col3" class="data row14 col3" >$75,276M</td>
+      <td id="T_585d3_row14_col4" class="data row14 col4" >$393M</td>
+      <td id="T_585d3_row14_col5" class="data row14 col5" >$5,913</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</section>
+<hr>
+<section id="section-4">
+<h2 class="section-title">Income Correlation</h2>
+<div class="notebook-content"><h3>05 — Income Correlation: Who Benefits Most?</h3>
+<p>Explores whether higher-income counties tend to have lower assessment ratios</p>
+<p>(i.e., receive more Prop 13 benefit). High-appreciation areas — often wealthier coastal counties —</p>
+<p>have seen the largest divergence between assessed and market values over time.</p>
+<p>This analysis tests the hypothesis that Prop 13 disproportionately benefits</p>
+<p>higher-income homeowners in high-appreciation regions.</p>
+<pre class="output-text">Loaded 58 counties for correlation analysis
+</pre>
+<pre class="output-text">Pearson r = 0.059, R² = 0.003, p = 0.6600
+</pre>
+<div id="plotly-dbe082bac3de" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-dbe082bac3de", [{"customdata": {"bdata": "vaf5LAhLr0ChHuxeON6TQFjyiyUf/6dA7JraYzOx8T+KaAdBt1WjQCrZsRGIyT5AqteWD7WdmUCxstiBzthTQPf63YyI5plAIguHlFVlN0DGt+ITpiKgQF0u4jsxWyNAktuoj29HqEDiNgmUw6WKQPWLKTlkc5hABKCsc2dRJEDnk8HrWfSiQFI7w9SWW2FA41I7Utpjk0Dt+mB0VMBqQJdiDWxI2JpAP+Jo2DlLJED68CLUn3ygQFNbRdohVlBA/eGRxQMrhkBWvWg0Xj0zQDZnTVa085dAAiDdvv2/H0Co3NEEGxZ+QF+5W0j26VNAuBedgWtFkECrbS8O0+k4QMz38MdRy5hAvACxW7o6PUBs5dIm6UOMQH8xbN6CLhZA9hYLcPBdsEBvxKQJeWe5QCaD7Fg7cZpA5Ihra/pMSEAhzXiYaxm3QIEGUa2UjnhA+3boUyhgn0A3VJ0fkIEmQKHOEIHy76VAHMOtzKWLTUBhBXtsGQ+bQP936cv3HVNACH1cRfjPlEBwV572Sj8LQFcgjLRjh59A34826RE2HkCBoK9uCWawQM7dU96T73FAWtu0ZvZ5s0AQsAxgwP1jQKsvmJ5zHqJA/MwPElj5UUDrhJmePJ+xQDNU1oAuQKVAJTM8YxZMnUB7PhQW5mNqQGBL9CrhEJlA7L8pBw5TI0C3tNMjCKmQQHKGmAHtHoFADm8bBZK0mUDYnDnal+WAQC29FBH2X6JAtka6VcbHPkC6f1HvFMWYQErDlVg++INAB4BgqIh4q0A/7Dt1fx+hQCxMrqsxnr1AHRCNkz97kEBofBNwPEiZQFBUopG0zGxAbwcFmDDRrEALScGuAehuQItsjTswzsJAt/EnKsusl0CoqQNDPdm1QGaHCbRlU3tAmcMXFyPyvEBwh5fxSO6kQNEHIHjJGLRAmarF8S2ackCeAvur88GWQOfI21vb11BAFNUCBf+DmkATNByF2oX5P7vwVvvEj5ZASYYcW89mMkCNx2UedJubQHxoHyt4k2VAqulMvStbr0Bs8xDXW1R9QNn/U9aBCplALG9YZIVOZUBwQP4GRLqVQIH5dfHIXTtA6p+WMXAfl0CkJyzxgHI4QAgDdgbaL7JAZRwj2SMUMkAqD10DaB+TQJZBxu3hHFlAS0DLcuMfo0DGrYIY6MtEQB3jcssoUalAKdzykaThgUB2Xia2hbCeQIpGPq/4f1NAyG+JpEwmkkC9sz16w6kzQA==", "dtype": "f8", "shape": "58, 2"}, "hovertemplate": "Median Household Income ($)=%{x:$,.0f}<br>Assessment Ratio (AV / Market Value)=%{marker.color:.2%}<br>Annual Tax Gap ($M)=%{customdata[1]:$,.0f}<br>county=%{text}<br>tax_gap_per_household=%{customdata[0]:$,.0f}<extra></extra>", "legendgroup": "", "marker": {"color": {"bdata": "eSj8Wdfk5T/lXX9wrVriPwwZucZfwOE/iFU06nLC5D/7mPbQIKDlP2dCa4WQ/OE/vVNz28/h5j+aIQ2TTuPiPzv8IeBKfOU/35YYVbba5j/OwNDIdRrjP1qbeabeUeI/gjkzQovX6D+pXpfgaIXiP9ehejlrs+s/uP+YvHpp5j+9l14GUVjjP60YloXv4+U/oe0BD4iA4z8+bEipsV7kPzsJLJi7s+U/Og54XcEC4j94B9xUDuThP4/fyLjsXuM/CtKfJOaW4j9nh8uJfdDlP1xsvF1bSOI/5KMSb3/z4T/azxXySTjlPwsq7DW9e+M/o3ibveUj6D8K5pum5IHjP1/fKQ+H8uk/c4eSkSO+5j+FgFq52CjnPyKkcZJEb+Y/hRsCVqNj5D+cUTU7pLviP9N15yML5uY/VkQVglEj4z/UEmSxPujgPwC4zMAKGOE/CLjR4Vrq4j8d5ET8MjXiP6dRwgfCquQ/7tN/vTQV5D+EsXt3tLviP/3R+pdoHuc/05KYyYMY4z9d1+gHu4rlP27mrChXbuY/Wpw0Drwk4z/vwCzHCc/SP7gma1+gPOU/RmDtbA2H4T/CWRyploDkP4urzVDIFuc/uy8Ksako5z8=", "dtype": "f8"}, "coloraxis": "coloraxis", "size": {"bdata": "oR7sXjjek0DsmtpjM7HxPyrZsRGIyT5AsbLYgc7YU0AiC4eUVWU3QF0u4jsxWyNA4jYJlMOlikAEoKxzZ1EkQFI7w9SWW2FA7fpgdFTAakA/4mjYOUskQFNbRdohVlBAVr1oNF49M0ACIN2+/b8fQF+5W0j26VNAq20vDtPpOEC8ALFbujo9QH8xbN6CLhZAb8SkCXlnuUDkiGtr+kxIQIEGUa2UjnhAN1SdH5CBJkAcw63MpYtNQP936cv3HVNAcFee9ko/C0DfjzbpETYeQM7dU96T73FAELAMYMD9Y0D8zA8SWPlRQDNU1oAuQKVAez4UFuZjakDsvykHDlMjQHKGmAHtHoFA2Jw52pflgEC2RrpVxsc+QErDlVg++INAP+w7dX8foUAdEI2TP3uQQFBUopG0zGxAC0nBrgHobkC38Scqy6yXQGaHCbRlU3tAcIeX8UjupECZqsXxLZpyQOfI21vb11BAEzQchdqF+T9Jhhxbz2YyQHxoHyt4k2VAbPMQ11tUfUAsb1hkhU5lQIH5dfHIXTtApCcs8YByOEBlHCPZIxQyQJZBxu3hHFlAxq2CGOjLREAp3PKRpOGBQIpGPq/4f1NAvbM9esOpM0A=", "dtype": "f8"}, "sizemode": "area", "sizeref": 16.2586820085, "symbol": "circle"}, "mode": "markers+text", "name": "", "orientation": "v", "showlegend": false, "text": ["Alameda", "Alpine", "Amador", "Butte", "Calaveras", "Colusa", "Contra Costa", "Del Norte", "El Dorado", "Fresno", "Glenn", "Humboldt", "Imperial", "Inyo", "Kern", "Kings", "Lake", "Lassen", "Los Angeles", "Madera", "Marin", "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", "Monterey", "Napa", "Nevada", "Orange", "Placer", "Plumas", "Riverside", "Sacramento", "San Benito", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "San Mateo", "Santa Barbara", "Santa Clara", "Santa Cruz", "Shasta", "Sierra", "Siskiyou", "Solano", "Sonoma", "Stanislaus", "Sutter", "Tehama", "Trinity", "Tulare", "Tuolumne", "Ventura", "Yolo", "Yuba"], "textposition": "top center", "type": "scatter", "x": {"bdata": "eN4BAAWLAQBlJAEAJQIBANYuAQDzDwEA1NQBAN3uAACugwEArAgBACH6AAAZ4gAAV9IAALn3AACL+QAAvAsBAMPbAAB76AAA00UBAEcfAQDDKgIAdeoAAJfvAAAE/QAAstYAAHZAAQCjYwEAUZ0BACM2AQAxqwEAP6sBAC0JAQAZSgEAKkgBAAOYAQBvLgEAznoBAPEVAgCVQwEALmABAJNJAgCsaAEAwFgCANmXAQD7CgEAtO4AAIrSAAANewEAwoMBAHgkAQDOGwEAleYAANW4AADa+wAAIBMBAP2OAQBpTAEAhQQBAA==", "dtype": "i4"}, "xaxis": "x", "y": {"bdata": "eSj8Wdfk5T/lXX9wrVriPwwZucZfwOE/iFU06nLC5D/7mPbQIKDlP2dCa4WQ/OE/vVNz28/h5j+aIQ2TTuPiPzv8IeBKfOU/35YYVbba5j/OwNDIdRrjP1qbeabeUeI/gjkzQovX6D+pXpfgaIXiP9ehejlrs+s/uP+YvHpp5j+9l14GUVjjP60YloXv4+U/oe0BD4iA4z8+bEipsV7kPzsJLJi7s+U/Og54XcEC4j94B9xUDuThP4/fyLjsXuM/CtKfJOaW4j9nh8uJfdDlP1xsvF1bSOI/5KMSb3/z4T/azxXySTjlPwsq7DW9e+M/o3ibveUj6D8K5pum5IHjP1/fKQ+H8uk/c4eSkSO+5j+FgFq52CjnPyKkcZJEb+Y/hRsCVqNj5D+cUTU7pLviP9N15yML5uY/VkQVglEj4z/UEmSxPujgPwC4zMAKGOE/CLjR4Vrq4j8d5ET8MjXiP6dRwgfCquQ/7tN/vTQV5D+EsXt3tLviP/3R+pdoHuc/05KYyYMY4z9d1+gHu4rlP27mrChXbuY/Wpw0Drwk4z/vwCzHCc/SP7gma1+gPOU/RmDtbA2H4T/CWRyploDkP4urzVDIFuc/uy8Ksako5z8=", "dtype": "f8"}, "yaxis": "y"}, {"line": {"color": "#555", "dash": "dash", "width": 1.5}, "mode": "lines", "name": "Trend (r=0.06)", "showlegend": true, "type": "scatter", "x": {"bdata": "AAAAAKAa50BBrV8pEKHnQIFav1KAJ+hAwgcffPCt6EADtX6lYDTpQENi3s7QuulAhA8++EBB6kDFvJ0hscfqQAVq/UohTutARhdddJHU60CGxLydAVvsQMdxHMdx4exACB988OFn7UBIzNsZUu7tQIl5O0PCdO5AyiabbDL77kAK1PqVooHvQKZArV8JBPBARhdddEFH8EDm7QyJeYrwQIbEvJ2xzfBAJ5tssukQ8UDHcRzHIVTxQGhIzNtZl/FACB988JHa8UCo9SsFyh3yQEjM2xkCYfJA6aKLLjqk8kCJeTtDcufyQCpQ61eqKvNAyiabbOJt80Bq/UqBGrHzQArU+pVS9PNAq6qqqoo39EBLgVq/wnr0QOxXCtT6vfRAjC666DIB9UAsBWr9akT1QMzbGRKjh/VAbbLJJtvK9UANiXk7Ew72QK5fKVBLUfZATjbZZIOU9kDuDIl5u9f2QI7jOI7zGvdAL7rooite90DPkJi3Y6H3QHBnSMyb5PdAED744NMn+ECwFKj1C2v4QFDrVwpErvhA8MEHH3zx+ECRmLcztDT5QDJvZ0jsd/lA0kUXXSS7+UByHMdxXP75QBLzdoaUQfpAsskmm8yE+kBToNavBMj6QPR2hsQ8C/tAlE022XRO+0A0JObtrJH7QNT6lQLl1PtAddFFFx0Y/EAVqPUrVVv8QLV+pUCNnvxAVlVVVcXh/ED2KwVq/ST9QJYCtX41aP1AN9lkk22r/UDXrxSope79QHeGxLzdMf5AGF100RV1/kC4MyTmTbj+QFgK1PqF+/5A+eCDD74+/0CZtzMk9oH/QDmO4zguxf9AbbLJJjMEAEG9nSExzyUAQQ2JeTtrRwBBXnTRRQdpAEGuXylQo4oAQf5KgVo/rABBTjbZZNvNAEGeITFvd+8AQe4MiXkTEQFBPvjgg68yAUGO4ziOS1QBQd7OkJjndQFBL7roooOXAUF/pUCtH7kBQc+QmLe72gFBIHzwwVf8AUFwZ0jM8x0CQcBSoNaPPwJBED744CthAkFgKVDrx4ICQbAUqPVjpAJBAAAAAADGAkE=", "dtype": "f8"}, "y": {"bdata": "JWj+86Mg5D/8ZVg8ayLkP9JjsoQyJOQ/qWEMzfkl5D+AX2YVwSfkP1ZdwF2IKeQ/LVsapk8r5D8DWXTuFi3kP9pWzjbeLuQ/sVQof6Uw5D+HUoLHbDLkP15Q3A80NOQ/NE42WPs15D8LTJCgwjfkP+JJ6uiJOeQ/uEdEMVE75D+PRZ55GD3kP2ZD+MHfPuQ/PEFSCqdA5D8TP6xSbkLkP+k8Bps1ROQ/wDpg4/xF5D+XOLorxEfkP202FHSLSeQ/RDRuvFJL5D8aMsgEGk3kP/EvIk3hTuQ/yC18lahQ5D+eK9bdb1LkP3UpMCY3VOQ/SyeKbv5V5D8iJeS2xVfkP/kiPv+MWeQ/zyCYR1Rb5D+mHvKPG13kP30cTNjiXuQ/UxqmIKpg5D8qGABpcWLkPwAWWrE4ZOQ/1xO0+f9l5D+uEQ5Cx2fkP4QPaIqOaeQ/Ww3C0lVr5D8xCxwbHW3kPwgJdmPkbuQ/3wbQq6tw5D+1BCr0cnLkP4wChDw6dOQ/YgDehAF25D85/jfNyHfkPxD8kRWQeeQ/5vnrXVd75D+990WmHn3kP5T1n+7lfuQ/avP5Nq2A5D9B8VN/dILkPxfvrcc7hOQ/7uwHEAOG5D/F6mFYyofkP5vou6CRieQ/cuYV6ViL5D9I5G8xII3kPx/iyXnnjuQ/9t8jwq6Q5D/M3X0KdpLkP6Pb11I9lOQ/edkxmwSW5D9Q14vjy5fkPyfV5SuTmeQ//dI/dFqb5D/U0Jm8IZ3kP6rO8wTpnuQ/gcxNTbCg5D9YyqeVd6LkPy7IAd4+pOQ/BcZbJgam5D/cw7VuzafkP7LBD7eUqeQ/ib9p/1ur5D9fvcNHI63kPza7HZDqruQ/Dbl32LGw5D/jttEgebLkP7q0K2lAtOQ/kLKFsQe25D9nsN/5zrfkPz6uOUKWueQ/FKyTil275D/rqe3SJL3kP8GnRxvsvuQ/mKWhY7PA5D9vo/uresLkP0WhVfRBxOQ/HJ+vPAnG5D/znAmF0MfkP8maY82XyeQ/oJi9FV/L5D92lhdeJs3kP02UcabtzuQ/JJLL7rTQ5D8=", "dtype": "f8"}}], {"coloraxis": {"cmax": 1.0, "cmin": 0.3, "colorbar": {"title": {"text": "Assessment Ratio (AV / Market Value)"}}, "colorscale": [[0.0, "rgb(165,0,38)"], [0.1, "rgb(215,48,39)"], [0.2, "rgb(244,109,67)"], [0.3, "rgb(253,174,97)"], [0.4, "rgb(254,224,139)"], [0.5, "rgb(255,255,191)"], [0.6, "rgb(217,239,139)"], [0.7, "rgb(166,217,106)"], [0.8, "rgb(102,189,99)"], [0.9, "rgb(26,152,80)"], [1.0, "rgb(0,104,55)"]], "showscale": false}, "height": 600, "legend": {"itemsizing": "constant", "tracegroupgap": 0}, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Median Household Income vs. Assessment Ratio by County<br><sup>R\u00b2 = 0.00 \u2014 bubble size = total annual tax gap | lower ratio = more Prop 13 benefit</sup>"}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "tickformat": ",.0f", "tickprefix": "$", "title": {"text": "Median Household Income ($)"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "tickformat": ".0%", "title": {"text": "Assessment Ratio (AV / Market Value)"}}, "autosize": true, "margin": {"l": 10, "r": 10, "t": 60, "b": 10}}, {"responsive": true, "displayModeBar": false});
+</script>
+<pre class="output-text">Income vs. gap/HH: Pearson r = 0.786, R² = 0.618, p = 0.0000
+</pre>
+<div id="plotly-10bda7572547" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-10bda7572547", [{"customdata": {"bdata": "eSj8Wdfk5T/lXX9wrVriPwwZucZfwOE/iFU06nLC5D/7mPbQIKDlP2dCa4WQ/OE/vVNz28/h5j+aIQ2TTuPiPzv8IeBKfOU/35YYVbba5j/OwNDIdRrjP1qbeabeUeI/gjkzQovX6D+pXpfgaIXiP9ehejlrs+s/uP+YvHpp5j+9l14GUVjjP60YloXv4+U/oe0BD4iA4z8+bEipsV7kPzsJLJi7s+U/Og54XcEC4j94B9xUDuThP4/fyLjsXuM/CtKfJOaW4j9nh8uJfdDlP1xsvF1bSOI/5KMSb3/z4T/azxXySTjlPwsq7DW9e+M/o3ibveUj6D8K5pum5IHjP1/fKQ+H8uk/c4eSkSO+5j+FgFq52CjnPyKkcZJEb+Y/hRsCVqNj5D+cUTU7pLviP9N15yML5uY/VkQVglEj4z/UEmSxPujgPwC4zMAKGOE/CLjR4Vrq4j8d5ET8MjXiP6dRwgfCquQ/7tN/vTQV5D+EsXt3tLviP/3R+pdoHuc/05KYyYMY4z9d1+gHu4rlP27mrChXbuY/Wpw0Drwk4z/vwCzHCc/SP7gma1+gPOU/RmDtbA2H4T/CWRyploDkP4urzVDIFuc/uy8Ksako5z8=", "dtype": "f8", "shape": "58, 1"}, "hovertemplate": "Median Household Income ($)=%{marker.color:$,.0f}<br>Annual Tax Gap per Household ($)=%{y:$,.0f}<br>county=%{text}<br>assessment_ratio=%{customdata[0]:.2%}<extra></extra>", "legendgroup": "", "marker": {"color": {"bdata": "eN4BAAWLAQBlJAEAJQIBANYuAQDzDwEA1NQBAN3uAACugwEArAgBACH6AAAZ4gAAV9IAALn3AACL+QAAvAsBAMPbAAB76AAA00UBAEcfAQDDKgIAdeoAAJfvAAAE/QAAstYAAHZAAQCjYwEAUZ0BACM2AQAxqwEAP6sBAC0JAQAZSgEAKkgBAAOYAQBvLgEAznoBAPEVAgCVQwEALmABAJNJAgCsaAEAwFgCANmXAQD7CgEAtO4AAIrSAAANewEAwoMBAHgkAQDOGwEAleYAANW4AADa+wAAIBMBAP2OAQBpTAEAhQQBAA==", "dtype": "i4"}, "coloraxis": "coloraxis", "symbol": "circle"}, "mode": "markers+text", "name": "", "orientation": "v", "showlegend": false, "text": ["Alameda", "Alpine", "Amador", "Butte", "Calaveras", "Colusa", "Contra Costa", "Del Norte", "El Dorado", "Fresno", "Glenn", "Humboldt", "Imperial", "Inyo", "Kern", "Kings", "Lake", "Lassen", "Los Angeles", "Madera", "Marin", "Mariposa", "Mendocino", "Merced", "Modoc", "Mono", "Monterey", "Napa", "Nevada", "Orange", "Placer", "Plumas", "Riverside", "Sacramento", "San Benito", "San Bernardino", "San Diego", "San Francisco", "San Joaquin", "San Luis Obispo", "San Mateo", "Santa Barbara", "Santa Clara", "Santa Cruz", "Shasta", "Sierra", "Siskiyou", "Solano", "Sonoma", "Stanislaus", "Sutter", "Tehama", "Trinity", "Tulare", "Tuolumne", "Ventura", "Yolo", "Yuba"], "textposition": "top center", "type": "scatter", "x": {"bdata": "eN4BAAWLAQBlJAEAJQIBANYuAQDzDwEA1NQBAN3uAACugwEArAgBACH6AAAZ4gAAV9IAALn3AACL+QAAvAsBAMPbAAB76AAA00UBAEcfAQDDKgIAdeoAAJfvAAAE/QAAstYAAHZAAQCjYwEAUZ0BACM2AQAxqwEAP6sBAC0JAQAZSgEAKkgBAAOYAQBvLgEAznoBAPEVAgCVQwEALmABAJNJAgCsaAEAwFgCANmXAQD7CgEAtO4AAIrSAAANewEAwoMBAHgkAQDOGwEAleYAANW4AADa+wAAIBMBAP2OAQBpTAEAhQQBAA==", "dtype": "i4"}, "xaxis": "x", "y": {"bdata": "vaf5LAhLr0BY8oslH/+nQIpoB0G3VaNAqteWD7WdmUD3+t2MiOaZQMa34hOmIqBAktuoj29HqED1iyk5ZHOYQOeTwetZ9KJA41I7Utpjk0CXYg1sSNiaQPrwItSffKBA/eGRxQMrhkA2Z01WtPOXQKjc0QQbFn5AuBedgWtFkEDM9/DHUcuYQGzl0ibpQ4xA9hYLcPBdsEAmg+xYO3GaQCHNeJhrGbdA+3boUyhgn0ChzhCB8u+lQGEFe2wZD5tACH1cRfjPlEBXIIy0Y4efQIGgr24JZrBAWtu0ZvZ5s0CrL5iecx6iQOuEmZ48n7FAJTM8YxZMnUBgS/Qq4RCZQLe00yMIqZBADm8bBZK0mUAtvRQR9l+iQLp/Ue8UxZhAB4BgqIh4q0AsTK6rMZ69QGh8E3A8SJlAbwcFmDDRrECLbI07MM7CQKipA0M92bVAmcMXFyPyvEDRByB4yRi0QJ4C+6vzwZZAFNUCBf+DmkC78Fb7xI+WQI3HZR50m5tAqulMvStbr0DZ/1PWgQqZQHBA/gZEupVA6p+WMXAfl0AIA3YG2i+yQCoPXQNoH5NAS0DLcuMfo0Ad43LLKFGpQHZeJraFsJ5AyG+JpEwmkkA=", "dtype": "f8"}, "yaxis": "y"}, {"line": {"color": "#e74c3c", "dash": "dash", "width": 1.5}, "mode": "lines", "name": "Trend (r=0.79)", "showlegend": true, "type": "scatter", "x": {"bdata": "AAAAAKAa50BBrV8pEKHnQIFav1KAJ+hAwgcffPCt6EADtX6lYDTpQENi3s7QuulAhA8++EBB6kDFvJ0hscfqQAVq/UohTutARhdddJHU60CGxLydAVvsQMdxHMdx4exACB988OFn7UBIzNsZUu7tQIl5O0PCdO5AyiabbDL77kAK1PqVooHvQKZArV8JBPBARhdddEFH8EDm7QyJeYrwQIbEvJ2xzfBAJ5tssukQ8UDHcRzHIVTxQGhIzNtZl/FACB988JHa8UCo9SsFyh3yQEjM2xkCYfJA6aKLLjqk8kCJeTtDcufyQCpQ61eqKvNAyiabbOJt80Bq/UqBGrHzQArU+pVS9PNAq6qqqoo39EBLgVq/wnr0QOxXCtT6vfRAjC666DIB9UAsBWr9akT1QMzbGRKjh/VAbbLJJtvK9UANiXk7Ew72QK5fKVBLUfZATjbZZIOU9kDuDIl5u9f2QI7jOI7zGvdAL7rooite90DPkJi3Y6H3QHBnSMyb5PdAED744NMn+ECwFKj1C2v4QFDrVwpErvhA8MEHH3zx+ECRmLcztDT5QDJvZ0jsd/lA0kUXXSS7+UByHMdxXP75QBLzdoaUQfpAsskmm8yE+kBToNavBMj6QPR2hsQ8C/tAlE022XRO+0A0JObtrJH7QNT6lQLl1PtAddFFFx0Y/EAVqPUrVVv8QLV+pUCNnvxAVlVVVcXh/ED2KwVq/ST9QJYCtX41aP1AN9lkk22r/UDXrxSope79QHeGxLzdMf5AGF100RV1/kC4MyTmTbj+QFgK1PqF+/5A+eCDD74+/0CZtzMk9oH/QDmO4zguxf9AbbLJJjMEAEG9nSExzyUAQQ2JeTtrRwBBXnTRRQdpAEGuXylQo4oAQf5KgVo/rABBTjbZZNvNAEGeITFvd+8AQe4MiXkTEQFBPvjgg68yAUGO4ziOS1QBQd7OkJjndQFBL7roooOXAUF/pUCtH7kBQc+QmLe72gFBIHzwwVf8AUFwZ0jM8x0CQcBSoNaPPwJBED744CthAkFgKVDrx4ICQbAUqPVjpAJBAAAAAADGAkE=", "dtype": "f8"}, "y": {"bdata": "nG9o6z7UgkC41qZ7ZseEQMw95QuOuoZA6KQjnLWtiEAEDGIs3aCKQBxzoLwElIxANNreTCyHjkCooI7uKT2QQDTUrba9NpFAwgfNflEwkkBMO+xG5SmTQNpuCw95I5RAaKIq1wwdlUD01UmfoBaWQIAJaWc0EJdADj2IL8gJmECacKf3WwOZQCqkxr/v/JlAtNflh4P2mkBACwVQF/CbQMw+JBir6ZxAXHJD4D7jnUDmpWKo0tyeQHbZgXBm1p9AgYZQHP1noEBHIGAAx+SgQA26b+SQYaFA1VN/yFreoUCZ7Y6sJFuiQGGHnpDu16JAJyGudLhUo0Dtur1YgtGjQLNUzTxMTqRAe+7cIBbLpEBBiOwE4EelQAci/OipxKVAzbsLzXNBpkCTVRuxPb6mQFnvKpUHO6dAIYk6edG3p0DnIkpdmzSoQK+8WUFlsahAdVZpJS8uqUA58HgJ+aqpQP+JiO3CJ6pAxyOY0YykqkCNvae1ViGrQFVXt5kgnqtAG/HGfeoarEDhitZhtJesQKck5kV+FK1Abb71KUiRrUAzWAUOEg6uQPvxFPLbiq5AwYsk1qUHr0CHJTS6b4SvQKbfIc+cALBAiqwpwQE/sEBueTGzZn2wQFBGOaXLu7BANBNBlzD6sEAW4EiJlTixQPqsUHv6drFA3nlYbV+1sUDARmBfxPOxQKQTaFEpMrJAiOBvQ45wskBqrXc1866yQEx6fydY7bJAMEeHGb0rs0AUFI8LImqzQPbglv2GqLNA2q2e7+vms0C+eqbhUCW0QKBHrtO1Y7RAhBS2xRqitEBm4b23f+C0QEquxankHrVALnvNm0ldtUAQSNWNrpu1QPQU3X8T2rVA2OHkcXgYtkC6ruxj3Va2QJ579FVClbZAgEj8R6fTtkBkFQQ6DBK3QEbiCyxxULdAKq8THtaOt0AMfBsQO823QO5IIwKgC7hA1BUr9ARKuEC24jLmaYi4QJqvOtjOxrhAfnxCyjMFuUBgSUq8mEO5QEQWUq79gblAJuNZoGLAuUAKsGGSx/65QOx8aYQsPbpA0ElxdpF7ukA=", "dtype": "f8"}}], {"coloraxis": {"colorbar": {"title": {"text": "Median Household Income ($)"}}, "colorscale": [[0.0, "#440154"], [0.1111111111111111, "#482878"], [0.2222222222222222, "#3e4989"], [0.3333333333333333, "#31688e"], [0.4444444444444444, "#26828e"], [0.5555555555555556, "#1f9e89"], [0.6666666666666666, "#35b779"], [0.7777777777777778, "#6ece58"], [0.8888888888888888, "#b5de2b"], [1.0, "#fde725"]], "showscale": false}, "height": 600, "legend": {"tracegroupgap": 0}, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Median Income vs. Annual Tax Gap per Household<br><sup>R\u00b2 = 0.62 \u2014 higher income counties tend to receive larger per-household Prop 13 benefit</sup>"}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "tickformat": ",.0f", "tickprefix": "$", "title": {"text": "Median Household Income ($)"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "tickformat": ",.0f", "tickprefix": "$", "title": {"text": "Annual Tax Gap per Household ($)"}}, "autosize": true, "margin": {"l": 10, "r": 10, "t": 60, "b": 10}}, {"responsive": true, "displayModeBar": false});
+</script>
+<div id="plotly-e58714b5b07e" class="plotly-graph-div" style="width:100%;"></div>
+<script type="text/javascript">
+Plotly.newPlot("plotly-e58714b5b07e", [{"hovertemplate": "County Income Quintile=%{x}<br>Avg Annual Tax Gap per HH ($)=%{marker.color}<extra></extra>", "legendgroup": "", "marker": {"color": {"bdata": "C9E6K4EJnUA82ZJkdxGVQE2O0w7vUKBAPEoD8+Fmp0BjWm6EvnOzQA==", "dtype": "f8"}, "coloraxis": "coloraxis", "pattern": {"shape": ""}}, "name": "", "orientation": "v", "showlegend": false, "text": {"bdata": "C9E6K4EJnUA82ZJkdxGVQE2O0w7vUKBAPEoD8+Fmp0BjWm6EvnOzQA==", "dtype": "f8"}, "textposition": "outside", "texttemplate": "$%{y:,.0f}", "type": "bar", "x": ["Lowest 20%", "20-40%", "40-60%", "60-80%", "Highest 20%"], "xaxis": "x", "y": {"bdata": "C9E6K4EJnUA82ZJkdxGVQE2O0w7vUKBAPEoD8+Fmp0BjWm6EvnOzQA==", "dtype": "f8"}, "yaxis": "y"}], {"barmode": "relative", "coloraxis": {"colorbar": {"title": {"text": "Avg Annual Tax Gap per HH ($)"}}, "colorscale": [[0.0, "rgb(255,245,240)"], [0.125, "rgb(254,224,210)"], [0.25, "rgb(252,187,161)"], [0.375, "rgb(252,146,114)"], [0.5, "rgb(251,106,74)"], [0.625, "rgb(239,59,44)"], [0.75, "rgb(203,24,29)"], [0.875, "rgb(165,15,21)"], [1.0, "rgb(103,0,13)"]], "showscale": false}, "height": 420, "legend": {"tracegroupgap": 0}, "template": {"data": {"bar": [{"error_x": {"color": "#2a3f5f"}, "error_y": {"color": "#2a3f5f"}, "marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "bar"}], "barpolar": [{"marker": {"line": {"color": "#E5ECF6", "width": 0.5}, "pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "barpolar"}], "carpet": [{"aaxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "baxis": {"endlinecolor": "#2a3f5f", "gridcolor": "white", "linecolor": "white", "minorgridcolor": "white", "startlinecolor": "#2a3f5f"}, "type": "carpet"}], "choropleth": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "choropleth"}], "contour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "contour"}], "contourcarpet": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "contourcarpet"}], "heatmap": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "heatmap"}], "histogram": [{"marker": {"pattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}}, "type": "histogram"}], "histogram2d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2d"}], "histogram2dcontour": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "histogram2dcontour"}], "mesh3d": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "type": "mesh3d"}], "parcoords": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "parcoords"}], "pie": [{"automargin": true, "type": "pie"}], "scatter": [{"fillpattern": {"fillmode": "overlay", "size": 10, "solidity": 0.2}, "type": "scatter"}], "scatter3d": [{"line": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatter3d"}], "scattercarpet": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattercarpet"}], "scattergeo": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergeo"}], "scattergl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattergl"}], "scattermap": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermap"}], "scattermapbox": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scattermapbox"}], "scatterpolar": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolar"}], "scatterpolargl": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterpolargl"}], "scatterternary": [{"marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "type": "scatterternary"}], "surface": [{"colorbar": {"outlinewidth": 0, "ticks": ""}, "colorscale": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "type": "surface"}], "table": [{"cells": {"fill": {"color": "#EBF0F8"}, "line": {"color": "white"}}, "header": {"fill": {"color": "#C8D4E3"}, "line": {"color": "white"}}, "type": "table"}]}, "layout": {"annotationdefaults": {"arrowcolor": "#2a3f5f", "arrowhead": 0, "arrowwidth": 1}, "autotypenumbers": "strict", "coloraxis": {"colorbar": {"outlinewidth": 0, "ticks": ""}}, "colorscale": {"diverging": [[0, "#8e0152"], [0.1, "#c51b7d"], [0.2, "#de77ae"], [0.3, "#f1b6da"], [0.4, "#fde0ef"], [0.5, "#f7f7f7"], [0.6, "#e6f5d0"], [0.7, "#b8e186"], [0.8, "#7fbc41"], [0.9, "#4d9221"], [1, "#276419"]], "sequential": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]], "sequentialminus": [[0.0, "#0d0887"], [0.1111111111111111, "#46039f"], [0.2222222222222222, "#7201a8"], [0.3333333333333333, "#9c179e"], [0.4444444444444444, "#bd3786"], [0.5555555555555556, "#d8576b"], [0.6666666666666666, "#ed7953"], [0.7777777777777778, "#fb9f3a"], [0.8888888888888888, "#fdca26"], [1.0, "#f0f921"]]}, "colorway": ["#636efa", "#EF553B", "#00cc96", "#ab63fa", "#FFA15A", "#19d3f3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"], "font": {"color": "#2a3f5f"}, "geo": {"bgcolor": "white", "lakecolor": "white", "landcolor": "#E5ECF6", "showlakes": true, "showland": true, "subunitcolor": "white"}, "hoverlabel": {"align": "left"}, "hovermode": "closest", "mapbox": {"style": "light"}, "paper_bgcolor": "white", "plot_bgcolor": "#E5ECF6", "polar": {"angularaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "radialaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "scene": {"xaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "yaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}, "zaxis": {"backgroundcolor": "#E5ECF6", "gridcolor": "white", "gridwidth": 2, "linecolor": "white", "showbackground": true, "ticks": "", "zerolinecolor": "white"}}, "shapedefaults": {"line": {"color": "#2a3f5f"}}, "ternary": {"aaxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "baxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}, "bgcolor": "#E5ECF6", "caxis": {"gridcolor": "white", "linecolor": "white", "ticks": ""}}, "title": {"x": 0.05}, "xaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}, "yaxis": {"automargin": true, "gridcolor": "white", "linecolor": "white", "ticks": "", "title": {"standoff": 15}, "zerolinecolor": "white", "zerolinewidth": 2}}}, "title": {"text": "Average Annual Tax Gap per Household by County Income Quintile<br><sup>Higher-income counties receive systematically larger Prop 13 benefits</sup>"}, "xaxis": {"anchor": "y", "domain": [0.0, 1.0], "title": {"text": "County Income Quintile"}}, "yaxis": {"anchor": "x", "domain": [0.0, 1.0], "tickformat": ",.0f", "tickprefix": "$", "title": {"text": "Avg Annual Tax Gap per HH ($)"}}, "autosize": true, "margin": {"l": 10, "r": 10, "t": 60, "b": 10}}, {"responsive": true, "displayModeBar": false});
+</script>
+<pre class="output-text">income_quintile  avg_assessment_ratio  avg_gap_per_hh  total_gap_millions  n_counties
+     Lowest 20%              0.586302     1858.376141          265.792042          12
+         20-40%              0.668444     1348.366595          689.669022          11
+         40-60%              0.643499     2088.466910         7804.224814          12
+         60-80%              0.649821     2995.441307         5111.598268          11
+    Highest 20%              0.636662     4979.744208        11758.104143          12
+</pre></div>
+</section>
+<hr>
+
+
+<footer>
+    Generated from Jupyter notebooks &mdash;
+    Data sources: CA Board of Equalization Annual Report 2022-23, Zillow Research ZHVI, Census ACS 5-Year 2022.
+    <br>
+    <em>Note: BOE total secured roll includes all property types; residential fraction estimated at ~70% per county type.
+    Market value estimates use Zillow ZHVI median home values. Tax gap assumes 1.1% effective rate on assessed value.</em>
+</footer>
+</body>
+</html>

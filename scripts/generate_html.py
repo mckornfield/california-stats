@@ -281,7 +281,7 @@ def main():
 </body>
 </html>"""
 
-    out_path = DOCS_DIR / "report.html"
+    out_path = ROOT / "index.html"
     out_path.write_text(html)
     print(f"\nWrote combined report to {out_path}")
     print(f"  File size: {out_path.stat().st_size:,} bytes")

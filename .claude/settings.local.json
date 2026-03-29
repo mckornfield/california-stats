@@ -19,7 +19,11 @@
       "Bash(for nb:*)",
       "Bash(do echo:*)",
       "Bash(.venv/bin/python scripts/generate_html.py 2>&1)",
-      "Bash(.venv/bin/python scripts/generate_html.py)"
+      "Bash(.venv/bin/python scripts/generate_html.py)",
+      "WebFetch(domain:www.hudexchange.info)",
+      "WebFetch(domain:www.huduser.gov)",
+      "WebFetch(domain:www.hud.gov)",
+      "WebFetch(domain:hudgis-hud.opendata.arcgis.com)"
     ]
   }
 }
