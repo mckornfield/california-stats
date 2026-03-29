@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m jupyter nbconvert --to notebook --execute notebooks/01_data_collection.ipynb --output-dir=/tmp)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "WebSearch",
+      "WebFetch(domain:boe.ca.gov)",
+      "WebFetch(domain:propertytax.bythenumbers.sco.ca.gov)",
+      "WebFetch(domain:www.lincolninst.edu)",
+      "WebFetch(domain:projects.scpr.org)",
+      "WebFetch(domain:censusreporter.org)",
+      "WebFetch(domain:www.census.gov)",
+      "Bash(.venv/bin/python scripts/fetch_census_data.py)",
+      "Bash(.venv/bin/python scripts/fetch_zillow_data.py)",
+      "Bash(.venv/bin/python -m papermill notebooks/01_data_collection.ipynb /dev/null --cwd notebooks 2>&1)",
+      "Bash(.venv/bin/python -c \"\nimport pandas as pd\ndf = pd.read_csv\\('data/processed/county_prop13.csv'\\)\nprint\\('Columns:', df.columns.tolist\\(\\)\\)\nprint\\(\\)\nat_100 = df[df['assessment_ratio'] >= 0.99]\nprint\\(f'Counties with ratio >= 0.99: {len\\(at_100\\)}'\\)\nfor _, r in at_100.sort_values\\('assessment_ratio', ascending=False\\).iterrows\\(\\):\n    print\\(f'  {r[\\\\\"county\\\\\"]:20s}  ratio={r[\\\\\"assessment_ratio\\\\\"]:.4f}'\\)\nprint\\(\\)\nprint\\(f'Full range: {df[\\\\\"assessment_ratio\\\\\"].min\\(\\):.4f} - {df[\\\\\"assessment_ratio\\\\\"].max\\(\\):.4f}'\\)\nprint\\(f'Counties at exactly 1.0: {\\(df[\\\\\"assessment_ratio\\\\\"] == 1.0\\).sum\\(\\)}'\\)\n\" 2>&1)",
+      "Bash(for nb:*)",
+      "Bash(do echo:*)",
+      "Bash(.venv/bin/python scripts/generate_html.py 2>&1)",
+      "Bash(.venv/bin/python scripts/generate_html.py)"
+    ]
+  }
+}
